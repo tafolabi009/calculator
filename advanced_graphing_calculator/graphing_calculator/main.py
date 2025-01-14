@@ -372,6 +372,43 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error saving graph image: {str(e)}")
 
+    def handle_logout(self):
+        """Handle user logout"""
+        try:
+            if self.current_user:
+                # Save current user's graphs before logging out
+                filename = f"graphs_{self.current_user.username}.json"
+                try:
+                    self.calculator.save_graphs(filename)
+                except Exception as e:
+                    QMessageBox.warning(self, "Warning", f"Could not save graphs: {str(e)}")
+
+            # Reset application state
+            self.current_user = None
+            self.calculator.clear_graphs()
+            self.update_history()
+
+            # Reset UI
+            self.user_info.setText("Not logged in")
+            self.teacher_controls.hide()
+            self.student_comments_widget.hide()
+            self.expr_input.clear()
+            self.second_expr_input.clear()
+
+            # Clear the graph
+            self.canvas.axes.clear()
+            self.canvas.draw()
+
+            # Create new login window and close main window
+            from auth_system import AuthWindow
+            self.auth_window = AuthWindow()
+            self.auth_window.login_successful.connect(self.set_user)
+            self.auth_window.show()
+            self.close()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error during logout: {str(e)}")
+
     def add_comment(self):
         """Add a teacher comment to the selected graph"""
         if not self.current_user or self.current_user.role != 'teacher':
