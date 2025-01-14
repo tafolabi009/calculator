@@ -1,0 +1,674 @@
+import sys
+import os
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                             QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
+                             QStackedWidget, QScrollArea, QSpinBox, QDoubleSpinBox,
+                             QTabWidget, QTextEdit, QMessageBox, QGridLayout,
+                             QListWidget, QInputDialog)
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QPalette, QColor, QFont
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import numpy as np
+from typing import Optional, Dict, List
+import json
+
+from graphing_calculator import GraphingCalculator, Graph
+from auth_system import User
+
+
+class DarkPalette(QPalette):
+    def __init__(self):
+        super().__init__()
+        self.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+        self.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+        self.setColor(QPalette.ColorRole.Base, QColor(25, 25, 25))
+        self.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+        self.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
+        self.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+        self.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
+        self.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+        self.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
+        self.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
+        self.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+        self.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
+
+
+class ModernButton(QPushButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: #2a82da;
+                border: none;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #3292ea;
+            }
+            QPushButton:pressed {
+                background-color: #1a72ca;
+            }
+        """)
+
+
+class ModernLineEdit(QLineEdit):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setStyleSheet("""
+            QLineEdit {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                color: white;
+                padding: 6px;
+                font-size: 14px;
+            }
+            QLineEdit:focus {
+                border: 2px solid #2a82da;
+            }
+        """)
+
+
+class GraphCanvas(FigureCanvas):
+    def __init__(self):
+        fig = Figure(figsize=(8, 6), dpi=100)
+        fig.patch.set_facecolor('#353535')
+        self.axes = fig.add_subplot(111)
+        self.axes.set_facecolor('#353535')
+        super().__init__(fig)
+        self.axes.grid(True, color='#666666')
+        self.axes.spines['bottom'].set_color('#666666')
+        self.axes.spines['top'].set_color('#666666')
+        self.axes.spines['right'].set_color('#666666')
+        self.axes.spines['left'].set_color('#666666')
+        self.axes.tick_params(axis='x', colors='#666666')
+        self.axes.tick_params(axis='y', colors='#666666')
+
+
+
+
+class MainWindow(QMainWindow):
+    def __init__(self, calculator: GraphingCalculator):
+        super().__init__()
+        self.calculator = calculator
+        self.current_user = None
+        self.history_list = QListWidget()  # Initialize history_list
+
+        # Expand teacher controls
+        self.teacher_controls = QWidget()
+        teacher_layout = QVBoxLayout(self.teacher_controls)
+
+        self.comment_input = QTextEdit()
+        self.comment_input.setMinimumHeight(150)
+
+        teacher_layout.addWidget(QLabel("Add Comment"))
+        teacher_layout.addWidget(self.comment_input)
+
+        add_comment_button = ModernButton("Add Comment")
+        add_comment_button.clicked.connect(self.add_comment)
+        teacher_layout.addWidget(add_comment_button)
+
+        # Create sidebar with modern styling
+        sidebar = QWidget()
+        sidebar.setMinimumWidth(350)  # Increased sidebar width
+        sidebar.setMaximumWidth(400)
+        sidebar.setStyleSheet("""
+            QWidget {
+                background-color: #1e1e2e;
+                border-right: 1px solid #333340;
+            }
+        """)
+        sidebar_layout = QVBoxLayout(sidebar)
+        sidebar_layout.setContentsMargins(20, 20, 20, 20)  # Increased margins
+        sidebar_layout.setSpacing(20)  # Increased spacing
+
+        # Header section with user info and logout
+        header_widget = QWidget()
+        header_layout = QVBoxLayout(header_widget)
+        header_layout.setSpacing(10)
+
+        self.user_info = QLabel("Not logged in")
+        self.user_info.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-size: 18px;
+                font-weight: bold;
+                padding: 10px;
+            }
+        """)
+        header_layout.addWidget(self.user_info)
+
+        # Add logout button
+        logout_btn = ModernButton("Logout")
+        logout_btn.setMinimumHeight(40)  # Increased button height
+        logout_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ff5555;
+                border: none;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 6px;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: #ff6e6e;
+            }
+            QPushButton:pressed {
+                background-color: #ff3333;
+            }
+        """)
+        logout_btn.clicked.connect(self.handle_logout)
+        header_layout.addWidget(logout_btn)
+        sidebar_layout.addWidget(header_widget)
+
+        # Expression input with improved styling
+        input_group = QWidget()
+        input_layout = QVBoxLayout(input_group)
+        input_layout.setSpacing(15)
+
+        input_label = QLabel("Function Input")
+        input_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        input_layout.addWidget(input_label)
+
+        self.expr_input = ModernLineEdit()
+        self.expr_input.setMinimumHeight(45)  # Increased input height
+        self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
+        input_layout.addWidget(self.expr_input)
+
+        self.second_expr_input = ModernLineEdit()
+        self.second_expr_input.setMinimumHeight(45)  # Increased input height
+        self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
+        input_layout.addWidget(self.second_expr_input)
+        sidebar_layout.addWidget(input_group)
+
+        # Teacher-specific controls
+        self.teacher_controls = QWidget()
+        teacher_layout = QVBoxLayout(self.teacher_controls)
+        teacher_layout.setSpacing(15)
+
+        teacher_label = QLabel("Teacher Controls")
+        teacher_label.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
+        teacher_layout.addWidget(teacher_label)
+
+        # Add a searchable student selector
+        self.student_selector = QComboBox()
+        self.student_selector.setMinimumHeight(45)
+        self.student_selector.setEditable(True)
+        self.student_selector.setStyleSheet("""
+            QComboBox {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                padding: 8px;
+                font-size: 14px;
+            }
+            QComboBox QLineEdit {
+                color: white;
+                padding: 5px;
+            }
+        """)
+        self.student_selector.currentIndexChanged.connect(self.load_selected_student_graphs)
+        teacher_layout.addWidget(self.student_selector)
+
+        # Add student graph history
+        student_history_label = QLabel("Student Graph History")
+        student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        teacher_layout.addWidget(student_history_label)
+
+        self.student_graph_list = QListWidget()
+        self.student_graph_list.setMinimumHeight(200)  # Increased height
+        self.student_graph_list.setStyleSheet("""
+            QListWidget {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                font-size: 14px;
+            }
+            QListWidget::item {
+                padding: 10px;
+            }
+            QListWidget::item:selected {
+                background-color: #4CAF50;
+            }
+        """)
+        self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
+        teacher_layout.addWidget(self.student_graph_list)
+
+        # Add comments section
+        comment_label = QLabel("Add Comment")
+        comment_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        teacher_layout.addWidget(comment_label)
+
+        self.comment_input = QTextEdit()  # Changed from QLineEdit to QTextEdit
+        self.comment_input.setMinimumHeight(100)  # Set minimum height
+        self.comment_input.setPlaceholderText("Write a comment...")
+        self.comment_input.setStyleSheet("""
+            QTextEdit {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                padding: 10px;
+                font-size: 14px;
+            }
+        """)
+        teacher_layout.addWidget(self.comment_input)
+
+        add_comment_btn = ModernButton("Add Comment")
+        add_comment_btn.setMinimumHeight(40)
+        add_comment_btn.clicked.connect(self.add_comment)
+        teacher_layout.addWidget(add_comment_btn)
+
+        sidebar_layout.addWidget(self.teacher_controls)
+        sidebar_layout.addStretch()
+        main_layout.addWidget(sidebar)
+
+        # Main content area
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(20, 20, 20, 20)
+        content_layout.setSpacing(20)
+
+        # Graph canvas
+        canvas_container = QWidget()
+        canvas_layout = QVBoxLayout(canvas_container)
+        self.canvas = GraphCanvas()
+        canvas_layout.addWidget(self.canvas)
+        content_layout.addWidget(canvas_container)
+
+        # Action buttons
+        buttons_container = QWidget()
+        buttons_layout = QHBoxLayout(buttons_container)
+        buttons_layout.setSpacing(15)
+
+        plot_btn = ModernButton("Plot Graph")
+        plot_btn.setMinimumHeight(40)
+        plot_btn.clicked.connect(self.plot_graph)
+        buttons_layout.addWidget(plot_btn)
+
+        save_graph_btn = ModernButton("Save Graph")
+        save_graph_btn.setMinimumHeight(40)
+        save_graph_btn.clicked.connect(self.save_graph)
+        buttons_layout.addWidget(save_graph_btn)
+
+        save_image_btn = ModernButton("Save as Image")
+        save_image_btn.setMinimumHeight(40)
+        save_image_btn.clicked.connect(self.save_graph_image)
+        buttons_layout.addWidget(save_image_btn)
+
+        content_layout.addWidget(buttons_container)
+
+        # Comments section for students
+        self.student_comments_widget = QWidget()
+        comments_layout = QVBoxLayout(self.student_comments_widget)
+
+        comments_label = QLabel("Teacher Comments")
+        comments_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        comments_layout.addWidget(comments_label)
+
+        self.comments_list = QListWidget()
+        self.comments_list.setMinimumHeight(150)
+        self.comments_list.setStyleSheet("""
+            QListWidget {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                font-size: 14px;
+            }
+            QListWidget::item {
+                padding: 10px;
+            }
+        """)
+        comments_layout.addWidget(self.comments_list)
+        content_layout.addWidget(self.student_comments_widget)
+
+        main_layout.addWidget(content)
+
+        # Apply dark theme
+        self.setPalette(DarkPalette())
+
+    def save_graph_image(self):
+        """Save the current graph as a PNG image"""
+        try:
+            file_name, _ = QFileDialog.getSaveFileName(
+                self, "Save Graph Image", "", "PNG Files (*.png);;All Files (*)"
+            )
+            if file_name:
+                if not file_name.endswith('.png'):
+                    file_name += '.png'
+                self.canvas.figure.savefig(file_name,
+                                         facecolor=self.canvas.figure.get_facecolor(),
+                                         edgecolor='none',
+                                         bbox_inches='tight')
+                QMessageBox.information(self, "Success", "Graph image saved successfully!")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error saving graph image: {str(e)}")
+
+
+
+    def add_comment(self):
+        """Add a teacher comment to the selected graph"""
+        if not self.current_user or self.current_user.role != 'teacher':
+            QMessageBox.warning(self, "Error", "Only teachers can add comments")
+            return
+
+        selected_student = self.student_selector.currentText()
+        if not selected_student:
+            QMessageBox.warning(self, "Error", "Please select a student")
+            return
+
+        selected_items = self.student_graph_list.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Error", "Please select a graph to comment on")
+            return
+
+        graph_name = selected_items[0].text()
+        comment_text = self.comment_input.toPlainText().strip()
+
+        if not comment_text:
+            QMessageBox.warning(self, "Error", "Please enter a comment")
+            return
+
+        # Add comment to graph
+        comment = {
+            'teacher': self.current_user.username,
+            'comment': comment_text,
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        if graph_name in self.calculator.graphs:
+            if not hasattr(self.calculator.graphs[graph_name], 'comments'):
+                self.calculator.graphs[graph_name].comments = []
+            self.calculator.graphs[graph_name].comments.append(comment)
+
+            # Update comments display
+            self.update_comments(graph_name)
+
+            # Clear comment input
+            self.comment_input.clear()
+
+            # Save changes
+            filename = f"graphs_{selected_student}.json"
+            self.calculator.save_graphs(filename)
+            QMessageBox.information(self, "Success", "Comment added successfully!")
+
+    def update_comments(self, graph_name):
+        """Update the comments list for the selected graph"""
+        self.comments_list.clear()
+        if graph_name in self.calculator.graphs:
+            comments = self.calculator.graphs[graph_name].comments
+            for comment in comments:
+                if isinstance(comment, dict):
+                    item_text = f"{comment['teacher']} ({comment['timestamp']}): {comment['comment']}"
+                else:
+                    item_text = str(comment)
+                self.comments_list.addItem(item_text)
+
+    def load_user_graphs(self):
+        """Load graphs for the current user"""
+        if self.current_user:
+            try:
+                file_name, _ = QFileDialog.getOpenFileName(
+                    self, "Load Graph Data", "", "JSON Files (*.json);;All Files (*)"
+                )
+                if file_name:
+                    self.calculator.load_graphs(file_name)
+                    self.update_history()
+                    QMessageBox.information(self, "Success", "Graphs loaded successfully!")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
+
+    def load_selected_student_graphs(self):
+        selected_student = self.student_selector.currentText()
+        if not selected_student:
+            return
+        try:
+            filename = f"graphs_{selected_student}.json"
+            self.calculator.load_graphs(filename)
+            self.update_history()
+        except FileNotFoundError:
+            self.calculator.clear_graphs()
+            self.update_history()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading graphs: {e}")
+
+    def load_graph_from_history(self, item):
+        """Load and display a graph from history when selected"""
+        graph_name = item.text()
+        if graph_name in self.calculator.graphs:
+            graph = self.calculator.graphs[graph_name]
+
+            # Update UI controls with graph data
+            self.expr_input.setText(graph.expression)
+            if hasattr(graph, 'second_expression') and graph.second_expression:
+                self.second_expr_input.setText(graph.second_expression)
+            else:
+                self.second_expr_input.clear()
+
+            self.x_min.setValue(graph.start)
+            self.x_max.setValue(graph.end)
+            self.scale_type.setCurrentText(graph.scale_type.capitalize())
+
+            # Plot the graph
+            self.plot_graph()
+
+            # Update comments
+            self.update_comments(graph_name)
+
+    def plot_graph(self):
+        try:
+            # Clear the plot
+            self.canvas.axes.clear()
+            self.canvas.axes.grid(True, color='#666666')
+
+            # Get input values
+            expression = self.expr_input.text().strip()
+            x_min = self.x_min.value()
+            x_max = self.x_max.value()
+            scale_type = self.scale_type.currentText().lower()
+
+            if not expression:
+                QMessageBox.warning(self, "Error", "Please enter an expression")
+                return
+
+            # Generate x values
+            x_values = np.linspace(x_min, x_max, 1000)
+
+            # Generate y values using evaluate_expression
+            y_values = [
+                self.calculator.evaluate_expression(expression, x, scale_type)
+                for x in x_values
+            ]
+
+            # Plot the graph
+            self.canvas.axes.plot(x_values, y_values, label='Graph')
+
+            # Add labels and refresh the canvas
+            self.canvas.axes.set_xlabel("x")
+            self.canvas.axes.set_ylabel("y")
+            self.canvas.draw()
+
+        except ValueError as e:
+            QMessageBox.critical(self, "Error", f"Error plotting graph: {str(e)}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Unexpected error: {str(e)}")
+
+    def update_history(self):
+        """Update the graph history list."""
+        self.history_list.clear()
+        for graph_name in self.calculator.graphs:
+            self.history_list.addItem(graph_name)
+
+    def add_comment(self):
+        """Add a comment to a selected graph."""
+        if not self.current_user or self.current_user.role != 'teacher':
+            QMessageBox.warning(self, "Error", "Only teachers can add comments")
+            return
+
+        selected_items = self.history_list.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Error", "Please select a graph to comment on")
+            return
+
+        graph_name = selected_items[0].text()
+        comment_text = self.comment_input.toPlainText().strip()
+
+        if not comment_text:
+            QMessageBox.warning(self, "Error", "Please enter a comment")
+            return
+
+        comment = {
+            'teacher': self.current_user.username,
+            'comment': comment_text,
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        if graph_name in self.calculator.graphs:
+            graph = self.calculator.graphs[graph_name]
+            if not hasattr(graph, 'comments'):
+                graph.comments = []
+            graph.comments.append(comment)
+
+            self.update_comments(graph_name)
+            self.comment_input.clear()
+
+    def update_comments(self, graph_name):
+        """Update comments display for a specific graph."""
+        self.comments_list.clear()
+        if graph_name in self.calculator.graphs:
+            comments = getattr(self.calculator.graphs[graph_name], 'comments', [])
+            for comment in comments:
+                self.comments_list.addItem(
+                    f"{comment['teacher']} ({comment['timestamp']}): {comment['comment']}"
+                )
+
+    def load_user_graphs(self):
+        """Load user graphs from a JSON file."""
+        file_name, _ = QFileDialog.getOpenFileName(self, "Load Graph Data", "", "JSON Files (*.json);;All Files (*)")
+        if file_name:
+            self.calculator.load_graphs(file_name)
+            self.update_history()
+
+    def save_graph(self):
+        """Save the current graph to a JSON file."""
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save Graph Data", "", "JSON Files (*.json);;All Files (*)")
+        if file_name:
+            self.calculator.save_graphs(file_name)
+            QMessageBox.information(self, "Success", "Graph data saved successfully!")
+
+    def save_graph_image(self):
+        """Save the graph as a PNG image."""
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save Graph Image", "", "PNG Files (*.png);;All Files (*)")
+        if file_name:
+            self.canvas.figure.savefig(file_name)
+            QMessageBox.information(self, "Success", "Graph image saved successfully!")
+
+    def set_user(self, user: User):
+        """Set the current user and update UI accordingly"""
+        self.current_user = user
+        self.calculator.set_user(user)
+
+        # Update UI based on user role
+        if user.role == "teacher":
+            self.teacher_controls.show()
+            self.load_student_list()
+        else:
+            self.teacher_controls.hide()
+
+        # Update user info label
+        self.user_info.setText(f"Welcome, {user.full_name}\n({user.role.capitalize()})")
+
+        # Load user's graphs
+        self.load_user_graphs()
+
+    def load_user_graphs(self):
+        """Load graphs for the current user"""
+        if self.current_user:
+            filename = f"graphs_{self.current_user.username}.json"
+            if os.path.exists(filename):
+                self.calculator.load_graphs(filename)
+                self.update_history()
+
+    def load_student_list(self):
+        """Load list of students for teacher view"""
+        if not self.current_user or self.current_user.role != 'teacher':
+            return
+
+        try:
+            # Load users from database
+            students = []  # This should be populated from your database
+            self.student_selector.clear()
+            self.student_selector.addItems([student.username for student in students])
+            self.student_list = students
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading student list: {str(e)}")
+
+    def load_student_graphs(self, index):
+        """Load graphs for selected student"""
+        if index >= 0 and self.current_user and self.current_user.role == 'teacher':
+            try:
+                student = self.student_list[index]
+                filename = f"graphs_{student.username}.json"
+                if os.path.exists(filename):
+                    self.calculator.load_graphs(filename)
+                    self.update_history()
+                else:
+                    self.calculator.clear_graphs()
+                    self.update_history()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error loading student graphs: {str(e)}")
+
+    def handle_logout(self):
+        """Handle user logout"""
+        self.current_user = None
+        self.calculator.clear_graphs()
+        self.update_history()
+        self.user_info.setText("Not logged in")
+        self.teacher_controls.hide()
+
+        # Emit logout signal or handle navigation
+        self.close()
+        # You'll need to implement the logic to show the login window here
+
+    def closeEvent(self, event):
+        """Handle application close event"""
+        if self.current_user:
+            try:
+                filename = f"graphs_{self.current_user.username}.json"
+                self.calculator.save_graphs(filename)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error saving graphs: {str(e)}")
+        event.accept()
+
+
+def main():
+    # Create QApplication instance
+    app = QApplication(sys.argv)
+
+    # Create calculator backend
+    calculator = GraphingCalculator()
+
+    # Create main window
+    window = MainWindow(calculator)
+    window.show()
+
+    # If you have a separate login window:
+    # from login_window import LoginWindow
+    # login = LoginWindow()
+    # login.user_logged_in.connect(window.set_user)
+    # login.show()
+
+    # Start event loop
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()
