@@ -78,6 +78,8 @@ class ModernLineEdit(QLineEdit):
 
 class GraphCanvas(FigureCanvas):
     def __init__(self):
+        # Create main layout
+        self.main_layout = QHBoxLayout()
         fig = Figure(figsize=(8, 6), dpi=100)
         fig.patch.set_facecolor('#353535')
         self.axes = fig.add_subplot(111)
@@ -167,6 +169,11 @@ class GraphCanvas(FigureCanvas):
 
         # Add range group to input layout
         input_layout.addWidget(range_group)
+
+        # Set central widget
+        central_widget = QWidget()
+        central_widget.setLayout(self.main_layout)
+        self.setCentralWidget(central_widget)
 
 
 class MainWindow(QMainWindow):
