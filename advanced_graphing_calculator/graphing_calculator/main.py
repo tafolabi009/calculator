@@ -89,6 +89,19 @@ class GraphCanvas(FigureCanvas):
         self.axes.spines['left'].set_color('#666666')
         self.axes.tick_params(axis='x', colors='#666666')
         self.axes.tick_params(axis='y', colors='#666666')
+        # Add these to the __init__ after creating the main layout
+        self.x_min = QDoubleSpinBox()
+        self.x_min.setRange(-1000, 1000)
+        self.x_min.setValue(-10)
+        self.x_min.setDecimals(2)
+
+        self.x_max = QDoubleSpinBox()
+        self.x_max.setRange(-1000, 1000)
+        self.x_max.setValue(10)
+        self.x_max.setDecimals(2)
+
+        self.scale_type = QComboBox()
+        self.scale_type.addItems(['Radians', 'Degrees'])
 
 
 class MainWindow(QMainWindow):
