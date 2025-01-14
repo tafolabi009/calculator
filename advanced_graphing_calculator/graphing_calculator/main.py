@@ -1,10 +1,11 @@
 import sys
 import os
+from datetime import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                             QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
-                             QStackedWidget, QScrollArea, QSpinBox, QDoubleSpinBox,
-                             QTabWidget, QTextEdit, QMessageBox, QGridLayout,
-                             QListWidget, QInputDialog, QFileDialog)
+                            QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
+                            QStackedWidget, QScrollArea, QSpinBox, QDoubleSpinBox,
+                            QTabWidget, QTextEdit, QMessageBox, QGridLayout,
+                            QListWidget, QInputDialog, QFileDialog)
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QPalette, QColor, QFont
 import matplotlib.pyplot as plt
@@ -102,6 +103,70 @@ class GraphCanvas(FigureCanvas):
 
         self.scale_type = QComboBox()
         self.scale_type.addItems(['Radians', 'Degrees'])
+        # Add x range controls
+        range_group = QWidget()
+        range_layout = QHBoxLayout(range_group)
+
+        # X minimum
+        x_min_label = QLabel("X Min:")
+        x_min_label.setStyleSheet("color: white;")
+        range_layout.addWidget(x_min_label)
+
+        self.x_min = QDoubleSpinBox()
+        self.x_min.setRange(-1000, 1000)
+        self.x_min.setValue(-10)
+        self.x_min.setDecimals(2)
+        self.x_min.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.x_min)
+
+        # X maximum
+        x_max_label = QLabel("X Max:")
+        x_max_label.setStyleSheet("color: white;")
+        range_layout.addWidget(x_max_label)
+
+        self.x_max = QDoubleSpinBox()
+        self.x_max.setRange(-1000, 1000)
+        self.x_max.setValue(10)
+        self.x_max.setDecimals(2)
+        self.x_max.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.x_max)
+
+        # Scale type
+        scale_label = QLabel("Scale:")
+        scale_label.setStyleSheet("color: white;")
+        range_layout.addWidget(scale_label)
+
+        self.scale_type = QComboBox()
+        self.scale_type.addItems(['Radians', 'Degrees'])
+        self.scale_type.setStyleSheet("""
+            QComboBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.scale_type)
+
+        # Add range group to input layout
+        input_layout.addWidget(range_group)
 
 
 class MainWindow(QMainWindow):
@@ -408,6 +473,62 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error during logout: {str(e)}")
+
+    def save_graph(self):
+        """Save the current graph"""
+        try:
+            # Get current expression
+            expression = self.expr_input.text().strip()
+            if not expression:
+                QMessageBox.warning(self, "Error", "Please enter an expression")
+                return
+
+            # Get name for the graph
+            name, ok = QInputDialog.getText(self, "Save Graph", "Enter a name for the graph:")
+            if not ok or not name:
+                return
+
+            # Create graph object
+            graph = Graph(
+                expression=expression,
+                variable='x',
+                start=float(self.x_min.value()),
+                end=float(self.x_max.value()),
+                scale_type=self.scale_type.currentText().lower(),
+                comments=[]
+            )
+
+            # Save to calculator
+            self.calculator.graphs[name] = graph
+
+            # Ask user where to save the JSON file
+            file_name, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Graph Data",
+                f"{name}.json",
+                "JSON Files (*.json);;All Files (*)"
+            )
+
+            if file_name:
+                # Save to JSON file
+                self.calculator.save_graphs(file_name)
+
+                # If this is a student's graph, also save as PNG
+                if self.current_user and self.current_user.role == 'student':
+                    png_file = file_name.rsplit('.', 1)[0] + '.png'
+                    self.canvas.figure.savefig(
+                        png_file,
+                        facecolor=self.canvas.figure.get_facecolor(),
+                        edgecolor='none',
+                        bbox_inches='tight'
+                    )
+
+                # Update history
+                self.update_history()
+                QMessageBox.information(self, "Success", "Graph saved successfully!")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error saving graph: {str(e)}")
 
     def add_comment(self):
         """Add a teacher comment to the selected graph"""
