@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTextEdit, QMessageBox, QGridLayout,
                              QListWidget, QInputDialog, QFileDialog)
 from PyQt6.QtWidgets import QFileDialog
+from PyQt6.QtCore import Qt, QSize
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -80,10 +81,10 @@ class CommentInput(QTextEdit):
         self.parent = parent
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Return and event.modifiers() == Qt.KeyboardModifier.NoModifier:
-            self.parent.add_comment()
+        if event.key() == Qt.Key.Key_Return and not event.modifiers():
+            self.parent.add_comment()  # Call parent's add_comment method
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(event)  # Handle other keys normally
 
 
 
@@ -455,7 +456,7 @@ class MainWindow(QMainWindow):
 
         layout.addStretch()  # Add stretch to push everything to the top
 
-    def setup_content_components(self, layout):
+    def setup_content_components(self, layout,):
         # Graph canvas
         canvas_container = QWidget()
         canvas_layout = QVBoxLayout(canvas_container)
@@ -463,34 +464,46 @@ class MainWindow(QMainWindow):
         canvas_layout.addWidget(self.canvas)
         layout.addWidget(canvas_container)
 
-        # Action buttons
+        # In the MainWindow.__init__ method, replace the buttons section with:
+        # Action buttons container
         buttons_container = QWidget()
-        buttons_layout = QHBoxLayout(buttons_container)
-        buttons_layout.setSpacing(15)
+        buttons_layout = QHBoxLayout()
+        buttons_container.setLayout(buttons_layout)
+        buttons_layout.setSpacing(10)
 
-        # Create buttons
+        # Left side buttons
+        left_buttons = QWidget()
+        left_layout = QHBoxLayout()
+        left_buttons.setLayout(left_layout)
+        left_layout.setSpacing(10)
+
         plot_btn = ModernButton("Plot Graph")
-        plot_btn.setMinimumHeight(40)
         plot_btn.clicked.connect(self.plot_graph)
-        buttons_layout.addWidget(plot_btn)
+        left_layout.addWidget(plot_btn)
 
-        load_graphs_btn = ModernButton("Load Graphs")  # Added here
-        load_graphs_btn.setMinimumHeight(40)
+        load_graphs_btn = ModernButton("Load Graphs")  # Moved here
         load_graphs_btn.clicked.connect(self.load_user_graphs)
-        buttons_layout.addWidget(load_graphs_btn)
+        left_layout.addWidget(load_graphs_btn)
+
+        buttons_layout.addWidget(left_buttons)
+
+        # Right side buttons
+        right_buttons = QWidget()
+        right_layout = QHBoxLayout()
+        right_buttons.setLayout(right_layout)
+        right_layout.setSpacing(10)
 
         save_graph_btn = ModernButton("Save Graph")
-        save_graph_btn.setMinimumHeight(40)
         save_graph_btn.clicked.connect(self.save_graph)
-        buttons_layout.addWidget(save_graph_btn)
+        right_layout.addWidget(save_graph_btn)
 
-        save_image_btn = ModernButton("Save as Image")
-        save_image_btn.setMinimumHeight(40)
+        save_image_btn = ModernButton("Save Image")
         save_image_btn.clicked.connect(self.save_graph_image)
-        buttons_layout.addWidget(save_image_btn)
+        right_layout.addWidget(save_image_btn)
 
-        buttons_container.setLayout(buttons_layout)
-        layout.addWidget(buttons_container)
+        buttons_layout.addWidget(right_buttons)
+        content_layout.addWidget(buttons_container)
+
 
 
     def set_user(self, user: User):
@@ -747,10 +760,8 @@ class MainWindow(QMainWindow):
 
         input_layout.addWidget(range_group)
 
-        # Add after the range controls
-        load_graphs_btn = ModernButton("Load Graphs")
-        load_graphs_btn.clicked.connect(self.load_user_graphs)
-        input_layout.addWidget(load_graphs_btn)
+
+        
         # Teacher-specific controls
         self.teacher_controls = QWidget()
         teacher_layout = QVBoxLayout(self.teacher_controls)
@@ -811,19 +822,20 @@ class MainWindow(QMainWindow):
         comment_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         teacher_layout.addWidget(comment_label)
 
-        self.comment_input = QTextEdit()  # Changed from QLineEdit to QTextEdit
-        self.comment_input.setMinimumHeight(30)  # Set minimum height
-        self.comment_input.setPlaceholderText("Write a comment...")
+        # In the teacher controls section, replace the comment input creation with:
+        self.comment_input = CommentInput(self)  # Use custom CommentInput
+        self.comment_input.setMinimumHeight(60)
+        self.comment_input.setPlaceholderText("Write a comment... (Press Enter to submit)")
         self.comment_input.setStyleSheet("""
-            QTextEdit {
-                background-color: #2d2d2d;
-                border: 2px solid #3d3d3d;
-                border-radius: 6px;
-                color: white;
-                padding: 10px;
-                font-size: 14px;
-            }
-        """)
+                    QTextEdit {
+                        background-color: #2d2d2d;
+                        border: 2px solid #3d3d3d;
+                        border-radius: 6px;
+                        color: white;
+                        padding: 10px;
+                        font-size: 14px;
+                    }
+                """)
         teacher_layout.addWidget(self.comment_input)
 
 
@@ -1128,35 +1140,28 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "Only teachers can add comments")
             return
 
+        comment_text = self.comment_input.toPlainText().strip()
+        if not comment_text:
+            return  # Don't show warning for empty comments on Enter press
+
+        selected_items = self.student_graph_list.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Error", "Please select a graph to comment on")
+            return
+
         try:
-            # Get the comment text
-            comment_text = self.comment_input.toPlainText().strip()
-            if not comment_text:
-                QMessageBox.warning(self, "Error", "Please enter a comment")
-                return
-
-            # Get selected graph
-            selected_items = self.student_graph_list.selectedItems()
-            if not selected_items:
-                QMessageBox.warning(self, "Error", "Please select a graph to comment on")
-                return
-
             graph_name = selected_items[0].text()
-
-            # Add comment to database
-            db = AdvancedDatabase()
             graph_data = self.student_graph_data[graph_name]
+
+            db = AdvancedDatabase()
             db.add_comment(graph_data['id'], self.current_user.id, comment_text)
 
-            # Clear comment input and update display
             self.comment_input.clear()
             self.update_comments(graph_name)
-
             QMessageBox.information(self, "Success", "Comment added successfully!")
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error adding comment: {str(e)}")
-
     def load_graph_from_history(self, item):
         """Load and display a graph from history when selected"""
         if not item:
