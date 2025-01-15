@@ -501,8 +501,8 @@ class MainWindow(QMainWindow):
 
         # Create sidebar with modern styling
         sidebar = QWidget()
-        sidebar.setMinimumWidth(350)  # Increased sidebar width
-        sidebar.setMaximumWidth(400)
+        sidebar.setMinimumWidth(400)  # Increased sidebar width
+        sidebar.setMaximumWidth(450)
         sidebar.setStyleSheet("""
             QWidget {
                 background-color: #1e1e2e;
@@ -511,12 +511,12 @@ class MainWindow(QMainWindow):
         """)
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(20, 20, 20, 20)  # Increased margins
-        sidebar_layout.setSpacing(20)  # Increased spacing
+        sidebar_layout.setSpacing(10)  # Increased spacing
 
         # Header section with user info and logout
         header_widget = QWidget()
         header_layout = QVBoxLayout(header_widget)
-        header_layout.setSpacing(10)
+        header_layout.setSpacing(5)
 
         self.user_info = QLabel("Not logged in")
         self.user_info.setStyleSheet("""
@@ -531,13 +531,13 @@ class MainWindow(QMainWindow):
 
         # Add logout button
         logout_btn = ModernButton("Logout")
-        logout_btn.setMinimumHeight(40)  # Increased button height
+        logout_btn.setMinimumHeight(15)  # Increased button height
         logout_btn.setStyleSheet("""
             QPushButton {
                 background-color: #ff5555;
                 border: none;
                 color: white;
-                padding: 10px 20px;
+                padding: 3px 5px;
                 border-radius: 6px;
                 font-size: 16px;
             }
@@ -558,16 +558,16 @@ class MainWindow(QMainWindow):
         input_layout.setSpacing(15)
 
         input_label = QLabel("Function Input")
-        input_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        input_label.setStyleSheet("color: white; font-size: 13px; font-weight: bold;")
         input_layout.addWidget(input_label)
 
         self.expr_input = ModernLineEdit()
-        self.expr_input.setMinimumHeight(45)  # Increased input height
+        self.expr_input.setMinimumHeight(35)  # Increased input height
         self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
         input_layout.addWidget(self.expr_input)
 
         self.second_expr_input = ModernLineEdit()
-        self.second_expr_input.setMinimumHeight(45)  # Increased input height
+        self.second_expr_input.setMinimumHeight(35)  # Increased input height
         self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
         input_layout.addWidget(self.second_expr_input)
         sidebar_layout.addWidget(input_group)
@@ -686,7 +686,7 @@ class MainWindow(QMainWindow):
 
         # Add a searchable student selector
         self.student_selector = QComboBox()
-        self.student_selector.setMinimumHeight(45)
+        self.student_selector.setMinimumHeight(35)
         self.student_selector.setEditable(True)
         self.student_selector.setStyleSheet("""
             QComboBox {
@@ -736,7 +736,7 @@ class MainWindow(QMainWindow):
         teacher_layout.addWidget(comment_label)
 
         self.comment_input = QTextEdit()  # Changed from QLineEdit to QTextEdit
-        self.comment_input.setMinimumHeight(100)  # Set minimum height
+        self.comment_input.setMinimumHeight(80)  # Set minimum height
         self.comment_input.setPlaceholderText("Write a comment...")
         self.comment_input.setStyleSheet("""
             QTextEdit {
@@ -750,10 +750,6 @@ class MainWindow(QMainWindow):
         """)
         teacher_layout.addWidget(self.comment_input)
 
-        add_comment_btn = ModernButton("Add Comment")
-        add_comment_btn.setMinimumHeight(40)
-        add_comment_btn.clicked.connect(self.add_comment)
-        teacher_layout.addWidget(add_comment_btn)
 
         sidebar_layout.addWidget(self.teacher_controls)
         sidebar_layout.addStretch()
@@ -781,11 +777,6 @@ class MainWindow(QMainWindow):
         plot_btn.setMinimumHeight(40)
         plot_btn.clicked.connect(self.plot_graph)
         buttons_layout.addWidget(plot_btn)
-
-        load_graphs_btn = ModernButton("Load Saved Graphs")
-        load_graphs_btn.setMinimumHeight(40)
-        load_graphs_btn.clicked.connect(self.load_user_graphs)
-        sidebar_layout.addWidget(load_graphs_btn)
 
         save_graph_btn = ModernButton("Save Graph")
         save_graph_btn.setMinimumHeight(40)
