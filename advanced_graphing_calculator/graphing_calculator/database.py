@@ -83,23 +83,25 @@ class AdvancedDatabase:
         """Verify user credentials and return user data"""
         conn = sqlite3.connect(self.db_file)
         c = conn.cursor()
-        c.execute('''
-            SELECT id, username, role, full_name, email 
-            FROM users 
-            WHERE username = ? AND password = ?
-        ''', (username, password))
-        user_data = c.fetchone()
-        conn.close()
+        try:
+            c.execute('''
+                SELECT id, username, role, full_name, email 
+                FROM users 
+                WHERE username = ? AND password = ?
+            ''', (username, password))
+            user_data = c.fetchone()
 
-        if user_data:
-            return {
-                'id': user_data[0],
-                'username': user_data[1],
-                'role': user_data[2],
-                'full_name': user_data[3],
-                'email': user_data[4]
-            }
-        return None
+            if user_data:
+                return {
+                    'id': user_data[0],  # Make sure id is first
+                    'username': user_data[1],
+                    'role': user_data[2],
+                    'full_name': user_data[3],
+                    'email': user_data[4]
+                }
+            return None
+        finally:
+            conn.close()
 
     def get_all_students(self):
         """Get list of all students"""

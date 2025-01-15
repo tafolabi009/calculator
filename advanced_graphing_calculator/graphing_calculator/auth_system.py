@@ -10,10 +10,11 @@ from database import AdvancedDatabase
 
 
 class User:
-    def __init__(self, username, password, role, full_name, email):
+    def __init__(self, username, password, role, full_name, email, user_id=None):  # Add user_id parameter
+        self.id = user_id  # Store the user ID
         self.username = username
         self.password = password
-        self.role = role  # Changed from 'type' to 'role' to match auth_system.py
+        self.role = role
         self.full_name = full_name
         self.email = email
 
@@ -33,7 +34,8 @@ class DatabaseHandler:
                 password=password,
                 role=user_data['role'],
                 full_name=user_data['full_name'],
-                email=user_data['email']
+                email=user_data['email'],
+                user_id=user_data['id']  # Pass the user ID
             )
         return None
 
@@ -281,6 +283,7 @@ class AuthWindow(QMainWindow):
 
         user = self.db.verify_user(username, password)
         if user:
+            print(f"Debug - Login successful. User ID: {user.id}")  # Add this debug line
             self.login_successful.emit(user)
             self.close()
         else:
