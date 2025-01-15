@@ -66,7 +66,7 @@ class ModernButton(QPushButton):
                 background-color: #2196F3;
                 border: none;
                 border-radius: 20px;
-                color: white;
+                color: black;
                 padding: 8px 16px;
             }
             QPushButton:hover {
@@ -79,7 +79,7 @@ class ModernButton(QPushButton):
     DARK_STYLE = """
         QWidget {
             background-color: #1e1e2e;
-            color: white;
+            color: black;
         }
         QLabel {
             color: white;
