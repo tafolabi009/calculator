@@ -298,10 +298,79 @@ class GraphCanvas(FigureCanvas):
         # Add range group to input layout
 
 
-
-
-
 class MainWindow(QMainWindow):
+    def __init__(self, calculator: GraphingCalculator):
+        super().__init__()
+        self.calculator = calculator
+        self.current_user = None
+
+        # Create main layout first
+        self.main_layout = QHBoxLayout()
+
+        # Initialize the UI components
+        self.init_ui()
+
+        # Set window properties
+        self.setWindowTitle("Advanced Graphing Calculator")
+        self.setMinimumSize(1200, 800)
+
+    def set_user(self, user: User):
+        """Set the current user and update UI accordingly"""
+        try:
+            self.current_user = user
+            self.calculator.set_user(user)
+
+            # Update UI based on user role
+            if user.role == "teacher":
+                self.teacher_controls.show()
+                self.student_comments_widget.hide()
+                self.load_student_list()
+            else:
+                self.teacher_controls.hide()
+                self.student_comments_widget.show()
+
+            # Update user info label
+            self.user_info.setText(f"Welcome, {user.full_name}\n({user.role.capitalize()})")
+
+            # Load user's graphs
+            self.load_user_graphs()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
+
+    def init_ui(self):
+        """Initialize the user interface"""
+        # Create central widget
+        central_widget = QWidget()
+        central_widget.setLayout(self.main_layout)
+        self.setCentralWidget(central_widget)
+
+        # Create and set up all UI components
+        self.setup_sidebar()
+        self.setup_main_content()
+
+        # Apply dark theme
+        self.setPalette(DarkPalette())
+
+    def setup_sidebar(self):
+        """Set up the sidebar with controls"""
+        sidebar = QWidget()
+        sidebar.setMinimumWidth(350)
+        sidebar.setMaximumWidth(400)
+        sidebar_layout = QVBoxLayout(sidebar)
+
+        # Add all sidebar components here...
+
+        self.main_layout.addWidget(sidebar)
+
+    def setup_main_content(self):
+        """Set up the main content area"""
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+
+        # Add all main content components here...
+
+        self.main_layout.addWidget(content)
     def __init__(self, calculator: GraphingCalculator):
         super().__init__()
         self.calculator = calculator
