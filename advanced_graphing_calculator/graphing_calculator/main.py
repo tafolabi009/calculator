@@ -15,6 +15,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from auth_system import User
+from database import AdvancedDatabase
 from graphing_calculator import GraphingCalculator, Graph
 
 
@@ -934,107 +935,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error updating history: {str(e)}")
 
-    def save_graph(self):
-        """Save the current graph"""
-        try:
-            # Get current expression
-            expression = self.expr_input.text().strip()
-            if not expression:
-                QMessageBox.warning(self, "Error", "Please enter an expression")
-                return
 
-            # Get name for the graph
-            name, ok = QInputDialog.getText(self, "Save Graph", "Enter a name for the graph:")
-            if not ok or not name:
-                return
-
-            # Create graph object
-            graph = Graph(
-                expression=expression,
-                variable=self.var_selector.currentText(),
-                start=float(self.x_min.value()),
-                end=float(self.x_max.value()),
-                scale_type=self.scale_type.currentText().lower(),
-                comments=[]
-            )
-
-            # Save to calculator
-            self.calculator.graphs[name] = graph
-
-            # Ask user where to save the JSON file
-            file_name, _ = QFileDialog.getSaveFileName(
-                self,
-                "Save Graph Data",
-                f"{name}.json",
-                "JSON Files (*.json);;All Files (*)"
-            )
-
-            if file_name:
-                # Save to JSON file
-                self.calculator.save_graphs(file_name)
-
-                # If this is a student's graph, also save as PNG
-                if self.current_user and self.current_user.role == 'student':
-                    png_file = file_name.rsplit('.', 1)[0] + '.png'
-                    self.canvas.figure.savefig(
-                        png_file,
-                        facecolor=self.canvas.figure.get_facecolor(),
-                        edgecolor='none',
-                        bbox_inches='tight'
-                    )
-
-                # Update history
-                self.update_history()
-                QMessageBox.information(self, "Success", "Graph saved successfully!")
-
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error saving graph: {str(e)}")
-
-    def add_comment(self):
-        """Add a teacher comment to the selected graph"""
-        if not self.current_user or self.current_user.role != 'teacher':
-            QMessageBox.warning(self, "Error", "Only teachers can add comments")
-            return
-
-        selected_student = self.student_selector.currentText()
-        if not selected_student:
-            QMessageBox.warning(self, "Error", "Please select a student")
-            return
-
-        selected_items = self.student_graph_list.selectedItems()
-        if not selected_items:
-            QMessageBox.warning(self, "Error", "Please select a graph to comment on")
-            return
-
-        graph_name = selected_items[0].text()
-        comment_text = self.comment_input.toPlainText().strip()
-
-        if not comment_text:
-            QMessageBox.warning(self, "Error", "Please enter a comment")
-            return
-
-        # Add comment to graph
-        comment = {
-            'teacher': self.current_user.username,
-            'comment': comment_text,
-            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-
-        if graph_name in self.calculator.graphs:
-            if not hasattr(self.calculator.graphs[graph_name], 'comments'):
-                self.calculator.graphs[graph_name].comments = []
-            self.calculator.graphs[graph_name].comments.append(comment)
-
-            # Update comments display
-            self.update_comments(graph_name)
-
-            # Clear comment input
-            self.comment_input.clear()
-
-            # Save changes
-            filename = f"graphs_{selected_student}.json"
-            self.calculator.save_graphs(filename)
-            QMessageBox.information(self, "Success", "Comment added successfully!")
 
     def update_comments(self, graph_name):
         """Update the comments list for the selected graph"""
@@ -1075,19 +976,105 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
 
+    def save_graph(self):
+        """Save the current graph to the database"""
+        if not self.current_user:
+            QMessageBox.warning(self, "Error", "Please log in to save graphs")
+            return
+
+        try:
+            name, ok = QInputDialog.getText(self, "Save Graph", "Enter a name for this graph:")
+            if ok and name:
+                graph_data = {
+                    'name': name,
+                    'expression': self.expr_input.text(),
+                    'variable': self.var_selector.currentText(),
+                    'x_min': self.x_min.value(),
+                    'x_max': self.x_max.value(),
+                    'y_min': self.y_min.value(),
+                    'y_max': self.y_max.value(),
+                    'scale_type': self.scale_type.currentText().lower()
+                }
+
+                db = AdvancedDatabase()
+                db.save_graph_state(self.current_user.id, graph_data)
+                self.update_history()
+                QMessageBox.information(self, "Success", "Graph saved successfully!")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error saving graph: {str(e)}")
+
+    def load_user_graphs(self):
+        """Load graphs for the current user from database"""
+        if not self.current_user:
+            return
+
+        try:
+            db = AdvancedDatabase()
+            graphs = db.get_user_graph_history(self.current_user.id)
+
+            # Clear current history
+            self.history_list.clear()
+
+            # Add graphs to history list
+            for graph in graphs:
+                self.history_list.addItem(graph['name'])
+
+            # Store the graph data for reference
+            self.graph_data = {graph['name']: graph for graph in graphs}
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
+
     def load_selected_student_graphs(self):
+        """Load graphs for selected student"""
         selected_student = self.student_selector.currentText()
         if not selected_student:
             return
+
         try:
-            filename = f"graphs_{selected_student}.json"
-            self.calculator.load_graphs(filename)
-            self.update_history()
-        except FileNotFoundError:
-            self.calculator.clear_graphs()
-            self.update_history()
+            db = AdvancedDatabase()
+            graphs = db.get_student_graphs(selected_student)
+
+            # Clear and update student graph list
+            self.student_graph_list.clear()
+            for graph in graphs:
+                self.student_graph_list.addItem(graph['name'])
+
+            # Store the graph data for reference
+            self.student_graph_data = {graph['name']: graph for graph in graphs}
+
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error loading graphs: {e}")
+            QMessageBox.critical(self, "Error", f"Error loading student graphs: {str(e)}")
+
+    def add_comment(self):
+        """Add a teacher comment to the selected graph"""
+        if not self.current_user or self.current_user.role != 'teacher':
+            QMessageBox.warning(self, "Error", "Only teachers can add comments")
+            return
+
+        selected_items = self.student_graph_list.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Error", "Please select a graph to comment on")
+            return
+
+        graph_name = selected_items[0].text()
+        comment_text = self.comment_input.toPlainText().strip()
+
+        if not comment_text:
+            QMessageBox.warning(self, "Error", "Please enter a comment")
+            return
+
+        try:
+            db = AdvancedDatabase()
+            graph_data = self.student_graph_data[graph_name]
+            db.add_comment(graph_data['id'], self.current_user.id, comment_text)
+
+            self.comment_input.clear()
+            self.update_comments(graph_name)
+            QMessageBox.information(self, "Success", "Comment added successfully!")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error adding comment: {str(e)}")
 
     def load_graph_from_history(self, item):
         """Load and display a graph from history when selected"""
@@ -1168,206 +1155,7 @@ class MainWindow(QMainWindow):
                     for graph_name in self.calculator.graphs:
                         self.history_list.addItem(graph_name)
 
-            def save_graph(self):
-                """Save the current graph to a JSON file"""
-                try:
-                    expression = self.expr_input.text().strip()
-                    if not expression:
-                        QMessageBox.warning(self, "Error", "Please enter an expression first")
-                        return
 
-                    name, ok = QInputDialog.getText(self, "Save Graph", "Enter a name for this graph:")
-                    if ok and name:
-                        graph = Graph(
-                            expression=expression,
-                            variable=self.var_selector.currentText(),
-                            start=self.x_min.value(),
-                            end=self.x_max.value(),
-                            scale_type=self.scale_type.currentText().lower()
-                        )
-                        self.calculator.save_graph(name, graph)
-                        QMessageBox.information(self, "Success", "Graph saved successfully!")
-                        self.update_history()
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Error saving graph: {str(e)}")
-
-            def handle_logout(self):
-                """Handle user logout"""
-                try:
-                    if self.current_user:
-                        # Save any unsaved work
-                        filename = f"graphs_{self.current_user.username}.json"
-                        self.calculator.save_graphs(filename)
-
-                    self.current_user = None
-                    self.calculator.clear_graphs()
-                    self.update_history()
-                    self.user_info.setText("Not logged in")
-                    self.teacher_controls.hide()
-                    self.student_comments_widget.hide()
-                    self.close()
-
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Error during logout: {str(e)}")
-
-            def closeEvent(self, event):
-                """Handle application close event"""
-                try:
-                    if self.current_user:
-                        filename = f"graphs_{self.current_user.username}.json"
-                        self.calculator.save_graphs(filename)
-                    event.accept()
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Error saving graphs: {str(e)}")
-                    event.ignore()
-
-            def set_user(self, user: User):
-                """Set the current user and update UI accordingly"""
-                try:
-                    self.current_user = user
-                    self.calculator.set_user(user)
-
-                    # Update UI based on user role
-                    if user.role == "teacher":
-                        self.teacher_controls.show()
-                        self.student_comments_widget.hide()
-                        self.load_student_list()
-                    else:
-                        self.teacher_controls.hide()
-                        self.student_comments_widget.show()
-
-                    # Update user info label
-                    self.user_info.setText(f"Welcome, {user.full_name}\n({user.role.capitalize()})")
-
-                    # Load user's graphs
-                    self.load_user_graphs()
-
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
-
-            def create_user_info_section(self, parent_layout):
-                # User info
-                self.user_info = QLabel("Not logged in")
-                self.user_info.setStyleSheet("""
-                    color: white;
-                    font-size: 18px;
-                    font-weight: bold;
-                    padding: 10px;
-                """)
-                parent_layout.addWidget(self.user_info)
-
-                # Logout button
-                logout_btn = ModernButton("Logout")
-                logout_btn.clicked.connect(self.handle_logout)
-                parent_layout.addWidget(logout_btn)
-
-            def create_input_section(self, parent_layout):
-                # Function input group
-                input_group = QWidget()
-                input_layout = QVBoxLayout(input_group)
-
-                # Function input
-                self.expr_input = ModernLineEdit()
-                self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
-                input_layout.addWidget(self.expr_input)
-
-                # Secondary input
-                self.second_expr_input = ModernLineEdit()
-                self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
-                input_layout.addWidget(self.second_expr_input)
-
-                parent_layout.addWidget(input_group)
-
-            def create_range_controls(self, parent_layout):
-                range_group = QWidget()
-                range_layout = QHBoxLayout(range_group)
-
-                # X range controls
-                self.x_min = QDoubleSpinBox()
-                self.x_min.setRange(-1000, 1000)
-                self.x_min.setValue(-10)
-                range_layout.addWidget(QLabel("X Min:"))
-                range_layout.addWidget(self.x_min)
-
-                self.x_max = QDoubleSpinBox()
-                self.x_max.setRange(-1000, 1000)
-                self.x_max.setValue(10)
-                range_layout.addWidget(QLabel("X Max:"))
-                range_layout.addWidget(self.x_max)
-
-                # Scale type
-                self.scale_type = QComboBox()
-                self.scale_type.addItems(['Radians', 'Degrees'])
-                range_layout.addWidget(QLabel("Scale:"))
-                range_layout.addWidget(self.scale_type)
-
-                parent_layout.addWidget(range_group)
-
-            def create_teacher_controls(self, parent_layout):
-                self.teacher_controls = QWidget()
-                teacher_layout = QVBoxLayout(self.teacher_controls)
-
-                # Student selector
-                self.student_selector = QComboBox()
-                self.student_selector.setEditable(True)
-                teacher_layout.addWidget(self.student_selector)
-
-                # Graph history
-                self.history_list = QListWidget()
-                teacher_layout.addWidget(self.history_list)
-
-                # Comments
-                self.comment_input = QTextEdit()
-                self.comment_input.setPlaceholderText("Write a comment...")
-                teacher_layout.addWidget(self.comment_input)
-
-                # Add comment button
-                add_comment_btn = ModernButton("Add Comment")
-                add_comment_btn.clicked.connect(self.add_comment)
-                teacher_layout.addWidget(add_comment_btn)
-
-                parent_layout.addWidget(self.teacher_controls)
-                self.teacher_controls.hide()  # Hidden by default
-
-            def create_action_buttons(self, parent_layout):
-                buttons_container = QWidget()
-                buttons_layout = QHBoxLayout(buttons_container)
-
-                plot_btn = ModernButton("Plot Graph")
-                plot_btn.clicked.connect(self.plot_graph)
-                buttons_layout.addWidget(plot_btn)
-
-                save_btn = ModernButton("Save Graph")
-                save_btn.clicked.connect(self.save_graph)
-                buttons_layout.addWidget(save_btn)
-
-                save_image_btn = ModernButton("Save Image")
-                save_image_btn.clicked.connect(self.save_graph_image)
-                buttons_layout.addWidget(save_image_btn)
-
-                parent_layout.addWidget(buttons_container)
-
-            def load_student_list(self):
-                """Load list of students for teacher view"""
-                if not self.current_user or self.current_user.role != 'teacher':
-                    return
-
-                try:
-                    # Load users from database
-                    with open('users.json', 'r') as f:
-                        users_data = json.load(f)
-                        students = [
-                            username for username, data in users_data.items()
-                            if data['role'] == 'student'
-                        ]
-
-                    self.student_selector.clear()
-                    self.student_selector.addItems(students)
-
-                except FileNotFoundError:
-                    QMessageBox.warning(self, "Warning", "No students found")
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Error loading student list: {str(e)}")
 
         def main():
             # Create QApplication instance

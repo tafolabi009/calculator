@@ -1,8 +1,5 @@
 # database.py
 import sqlite3
-import json
-import os
-from datetime import datetime
 
 class AdvancedDatabase:
     def __init__(self):
@@ -118,23 +115,35 @@ class AdvancedDatabase:
         return students
 
     def save_graph(self, user_id, graph_data):
-        """Save a graph to the database"""
+        """Save a graph with all its properties"""
         conn = sqlite3.connect(self.db_file)
         c = conn.cursor()
-        c.execute('''
-            INSERT INTO graphs (
-                user_id, name, expression, variable,
-                x_min, x_max, y_min, y_max, scale_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            user_id, graph_data['name'], graph_data['expression'],
-            graph_data['variable'], graph_data['x_min'], graph_data['x_max'],
-            graph_data['y_min'], graph_data['y_max'], graph_data['scale_type']
-        ))
-        graph_id = c.lastrowid
-        conn.commit()
-        conn.close()
-        return graph_id
+        try:
+            c.execute('''
+                INSERT INTO graphs (
+                    user_id, name, expression, variable,
+                    x_min, x_max, y_min, y_max, scale_type
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id,
+                graph_data['name'],
+                graph_data['expression'],
+                graph_data['variable'],
+                graph_data['x_min'],
+                graph_data['x_max'],
+                graph_data['y_min'],
+                graph_data['y_max'],
+                graph_data['scale_type']
+            ))
+            graph_id = c.lastrowid
+            conn.commit()
+            return graph_id
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()
+
 
     def get_user_graphs(self, user_id):
         """Get all graphs for a specific user"""
@@ -197,3 +206,79 @@ class AdvancedDatabase:
             }
             for c in comments
         ]
+
+
+    def get_user_graph_history(self, user_id):
+        """Get all graphs for a user with their comments"""
+        conn = sqlite3.connect(self.db_file)
+        c = conn.cursor()
+        c.execute('''
+            SELECT g.id, g.name, g.expression, g.variable,
+                   g.x_min, g.x_max, g.y_min, g.y_max, g.scale_type,
+                   g.created_at
+            FROM graphs g
+            WHERE g.user_id = ?
+            ORDER BY g.created_at DESC
+        ''', (user_id,))
+        graphs = c.fetchall()
+
+        result = []
+        for g in graphs:
+            # Get comments for each graph
+            c.execute('''
+                SELECT c.comment_text, u.username, c.created_at
+                FROM comments c
+                JOIN users u ON c.teacher_id = u.id
+                WHERE c.graph_id = ?
+                ORDER BY c.created_at DESC
+            ''', (g[0],))
+            comments = c.fetchall()
+
+            result.append({
+                'id': g[0],
+                'name': g[1],
+                'expression': g[2],
+                'variable': g[3],
+                'x_min': g[4],
+                'x_max': g[5],
+                'y_min': g[6],
+                'y_max': g[7],
+                'scale_type': g[8],
+                'created_at': g[9],
+                'comments': [{
+                    'text': c[0],
+                    'teacher': c[1],
+                    'timestamp': c[2]
+                } for c in comments]
+            })
+
+        conn.close()
+        return result
+
+    def get_student_graphs(self, student_username):
+        """Get all graphs for a specific student"""
+        conn = sqlite3.connect(self.db_file)
+        c = conn.cursor()
+        c.execute('''
+            SELECT g.id, g.name, g.expression, g.variable,
+                   g.x_min, g.x_max, g.y_min, g.y_max, g.scale_type,
+                   g.created_at
+            FROM graphs g
+            JOIN users u ON g.user_id = u.id
+            WHERE u.username = ?
+            ORDER BY g.created_at DESC
+        ''', (student_username,))
+        graphs = c.fetchall()
+        conn.close()
+        return [{
+            'id': g[0],
+            'name': g[1],
+            'expression': g[2],
+            'variable': g[3],
+            'x_min': g[4],
+            'x_max': g[5],
+            'y_min': g[6],
+            'y_max': g[7],
+            'scale_type': g[8],
+            'created_at': g[9]
+        } for g in graphs]
