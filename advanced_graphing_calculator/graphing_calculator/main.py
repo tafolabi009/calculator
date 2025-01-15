@@ -456,55 +456,6 @@ class MainWindow(QMainWindow):
 
         layout.addStretch()  # Add stretch to push everything to the top
 
-    def setup_content_components(self, layout,):
-        # Graph canvas
-        canvas_container = QWidget()
-        canvas_layout = QVBoxLayout(canvas_container)
-        self.canvas = GraphCanvas()
-        canvas_layout.addWidget(self.canvas)
-        layout.addWidget(canvas_container)
-
-        # In the MainWindow.__init__ method, replace the buttons section with:
-        # Action buttons container
-        buttons_container = QWidget()
-        buttons_layout = QHBoxLayout()
-        buttons_container.setLayout(buttons_layout)
-        buttons_layout.setSpacing(10)
-
-        # Left side buttons
-        left_buttons = QWidget()
-        left_layout = QHBoxLayout()
-        left_buttons.setLayout(left_layout)
-        left_layout.setSpacing(10)
-
-        plot_btn = ModernButton("Plot Graph")
-        plot_btn.clicked.connect(self.plot_graph)
-        left_layout.addWidget(plot_btn)
-
-        load_graphs_btn = ModernButton("Load Graphs")  # Moved here
-        load_graphs_btn.clicked.connect(self.load_user_graphs)
-        left_layout.addWidget(load_graphs_btn)
-
-        buttons_layout.addWidget(left_buttons)
-
-        # Right side buttons
-        right_buttons = QWidget()
-        right_layout = QHBoxLayout()
-        right_buttons.setLayout(right_layout)
-        right_layout.setSpacing(10)
-
-        save_graph_btn = ModernButton("Save Graph")
-        save_graph_btn.clicked.connect(self.save_graph)
-        right_layout.addWidget(save_graph_btn)
-
-        save_image_btn = ModernButton("Save Image")
-        save_image_btn.clicked.connect(self.save_graph_image)
-        right_layout.addWidget(save_image_btn)
-
-        buttons_layout.addWidget(right_buttons)
-        content_layout.addWidget(buttons_container)
-
-
 
     def set_user(self, user: User):
         """Set the current user and update UI accordingly"""
@@ -856,27 +807,48 @@ class MainWindow(QMainWindow):
         canvas_layout.addWidget(self.canvas)
         content_layout.addWidget(canvas_container)
 
-        # Action buttons
+        # In the MainWindow.__init__ method, replace the buttons section with:
+        # Action buttons container
         buttons_container = QWidget()
-        buttons_layout = QHBoxLayout(buttons_container)
-        buttons_layout.setSpacing(15)
+        buttons_layout = QHBoxLayout()
+        buttons_container.setLayout(buttons_layout)
+        buttons_layout.setSpacing(10)
+
+        # Left side buttons
+        left_buttons = QWidget()
+        left_layout = QHBoxLayout()
+        left_buttons.setLayout(left_layout)
+        left_layout.setSpacing(10)
 
         plot_btn = ModernButton("Plot Graph")
-        plot_btn.setMinimumHeight(40)
         plot_btn.clicked.connect(self.plot_graph)
-        buttons_layout.addWidget(plot_btn)
+        left_layout.addWidget(plot_btn)
+
+        load_graphs_btn = ModernButton("Load Graphs")  # Moved here
+        load_graphs_btn.clicked.connect(self.load_user_graphs)
+        left_layout.addWidget(load_graphs_btn)
+
+        buttons_layout.addWidget(left_buttons)
+
+        # Right side buttons
+        right_buttons = QWidget()
+        right_layout = QHBoxLayout()
+        right_buttons.setLayout(right_layout)
+        right_layout.setSpacing(10)
 
         save_graph_btn = ModernButton("Save Graph")
-        save_graph_btn.setMinimumHeight(40)
         save_graph_btn.clicked.connect(self.save_graph)
-        buttons_layout.addWidget(save_graph_btn)
+        right_layout.addWidget(save_graph_btn)
 
-        save_image_btn = ModernButton("Save as Image")
-        save_image_btn.setMinimumHeight(40)
+        save_image_btn = ModernButton("Save Image")
         save_image_btn.clicked.connect(self.save_graph_image)
-        buttons_layout.addWidget(save_image_btn)
+        right_layout.addWidget(save_image_btn)
 
+        buttons_layout.addWidget(right_buttons)
         content_layout.addWidget(buttons_container)
+
+        # Remove the Load Graphs button from sidebar
+        # Delete or comment out the load_graphs_btn in the sidebar section
 
         # Comments section for students
         self.student_comments_widget = QWidget()
