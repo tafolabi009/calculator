@@ -114,7 +114,7 @@ class AdvancedDatabase:
         conn.close()
         return students
 
-    def save_graph(self, user_id, graph_data):
+    def save_graph_state(self, user_id, graph_data):
         """Save a graph with all its properties"""
         conn = sqlite3.connect(self.db_file)
         c = conn.cursor()
