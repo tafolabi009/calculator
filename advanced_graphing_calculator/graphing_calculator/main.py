@@ -77,6 +77,135 @@ class ModernLineEdit(QLineEdit):
 
 
 class GraphCanvas(FigureCanvas):
+    def __init__(self, calculator: GraphingCalculator):
+        super().__init__()
+        self.calculator = calculator
+        self.current_user = None
+        self.history_list = QListWidget()
+
+        # Create main layout first
+        main_layout = QHBoxLayout()
+
+        # Create sidebar
+        sidebar = QWidget()
+        sidebar.setMinimumWidth(350)
+        sidebar.setMaximumWidth(400)
+        sidebar.setStyleSheet("""
+            QWidget {
+                background-color: #1e1e2e;
+                border-right: 1px solid #333340;
+            }
+        """)
+        sidebar_layout = QVBoxLayout(sidebar)
+        sidebar_layout.setContentsMargins(20, 20, 20, 20)
+        sidebar_layout.setSpacing(20)
+
+        # Create input group
+        input_group = QWidget()
+        input_layout = QVBoxLayout(input_group)
+        input_layout.setSpacing(15)
+
+        # Add function input label
+        input_label = QLabel("Function Input")
+        input_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        input_layout.addWidget(input_label)
+
+        # Add expression inputs
+        self.expr_input = ModernLineEdit()
+        self.expr_input.setMinimumHeight(45)
+        self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
+        input_layout.addWidget(self.expr_input)
+
+        self.second_expr_input = ModernLineEdit()
+        self.second_expr_input.setMinimumHeight(45)
+        self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
+        input_layout.addWidget(self.second_expr_input)
+
+        # Add x range controls
+        range_group = QWidget()
+        range_layout = QHBoxLayout(range_group)
+
+        # X minimum
+        x_min_label = QLabel("X Min:")
+        x_min_label.setStyleSheet("color: white;")
+        range_layout.addWidget(x_min_label)
+
+        self.x_min = QDoubleSpinBox()
+        self.x_min.setRange(-1000, 1000)
+        self.x_min.setValue(-10)
+        self.x_min.setDecimals(2)
+        self.x_min.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.x_min)
+
+        # X maximum
+        x_max_label = QLabel("X Max:")
+        x_max_label.setStyleSheet("color: white;")
+        range_layout.addWidget(x_max_label)
+
+        self.x_max = QDoubleSpinBox()
+        self.x_max.setRange(-1000, 1000)
+        self.x_max.setValue(10)
+        self.x_max.setDecimals(2)
+        self.x_max.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.x_max)
+
+        # Scale type
+        scale_label = QLabel("Scale:")
+        scale_label.setStyleSheet("color: white;")
+        range_layout.addWidget(scale_label)
+
+        self.scale_type = QComboBox()
+        self.scale_type.addItems(['Radians', 'Degrees'])
+        self.scale_type.setStyleSheet("""
+            QComboBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.scale_type)
+
+        # Add range group to input layout
+        input_layout.addWidget(range_group)
+
+        # Add input group to sidebar
+        sidebar_layout.addWidget(input_group)
+
+        # Create canvas container
+        canvas_container = QWidget()
+        canvas_layout = QVBoxLayout(canvas_container)
+        self.canvas = GraphCanvas()
+        canvas_layout.addWidget(self.canvas)
+
+        # Add widgets to main layout
+        main_layout.addWidget(sidebar)
+        main_layout.addWidget(canvas_container)
+
+        # Set central widget
+        central_widget = QWidget()
+        central_widget.setLayout(main_layout)
+        self.setCentralWidget(central_widget)
+
+        # Continue with the rest of your initialization...
+        # (Add the remaining widgets and controls)
     def __init__(self):
         # Create main layout
         self.main_layout = QHBoxLayout()
@@ -167,12 +296,9 @@ class GraphCanvas(FigureCanvas):
         """)
         range_layout.addWidget(self.scale_type)
         # Add range group to input layout
-        input_layout.addWidget(range_group)
 
-        # Set central widget
-        central_widget = QWidget()
-        central_widget.setLayout(self.main_layout)
-        self.setCentralWidget(central_widget)
+
+
 
 
 class MainWindow(QMainWindow):
