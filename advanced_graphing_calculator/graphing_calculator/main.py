@@ -490,7 +490,7 @@ class MainWindow(QMainWindow):
         teacher_layout = QVBoxLayout(self.teacher_controls)
 
         self.comment_input = QTextEdit()
-        self.comment_input.setMinimumHeight(150)
+        self.comment_input.setMinimumHeight(50)
 
         teacher_layout.addWidget(QLabel("Add Comment"))
         teacher_layout.addWidget(self.comment_input)
@@ -531,7 +531,7 @@ class MainWindow(QMainWindow):
 
         # Add logout button
         logout_btn = ModernButton("Logout")
-        logout_btn.setMinimumHeight(15)  # Increased button height
+        logout_btn.setMinimumHeight(35)  # Increased button height
         logout_btn.setStyleSheet("""
             QPushButton {
                 background-color: #ff5555;
@@ -711,7 +711,7 @@ class MainWindow(QMainWindow):
         teacher_layout.addWidget(student_history_label)
 
         self.student_graph_list = QListWidget()
-        self.student_graph_list.setMinimumHeight(300)  # Increased height
+        self.student_graph_list.setMinimumHeight(30)  # Increased height
         self.student_graph_list.setStyleSheet("""
             QListWidget {
                 background-color: #2d2d2d;
@@ -736,7 +736,7 @@ class MainWindow(QMainWindow):
         teacher_layout.addWidget(comment_label)
 
         self.comment_input = QTextEdit()  # Changed from QLineEdit to QTextEdit
-        self.comment_input.setMinimumHeight(80)  # Set minimum height
+        self.comment_input.setMinimumHeight(30)  # Set minimum height
         self.comment_input.setPlaceholderText("Write a comment...")
         self.comment_input.setStyleSheet("""
             QTextEdit {
