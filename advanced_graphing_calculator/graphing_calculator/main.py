@@ -872,26 +872,18 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            # Load users from the database
-            with open('users.json', 'r') as f:
-                users_data = json.load(f)
-
-            # Filter for student users
-            students = [
-                username for username, data in users_data.items()
-                if data['role'] == 'student'
-            ]
-
-            # Update the student selector
+            from database import AdvancedDatabase
+            db = AdvancedDatabase()
+            students = db.get_all_students()
             self.student_selector.clear()
-            if students:
-                self.student_selector.addItems(students)
-                self.student_list = students
-            else:
-                QMessageBox.information(self, "Info", "No students found")
 
-        except FileNotFoundError:
-            QMessageBox.warning(self, "Warning", "No user database found")
+            if students:
+                # Store complete student data
+                self.student_list = students
+                # Add only usernames to the combo box
+                self.student_selector.addItems([student[1] for student in students])
+            else:
+                QMessageBox.information(self, "Info", "No students found in database")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading student list: {str(e)}")
 

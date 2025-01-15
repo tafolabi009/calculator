@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QStackedWidget, QMessageBox)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QPalette, QColor
+from database import AdvancedDatabase
 
 
 class User:
@@ -19,39 +20,20 @@ class User:
 
 class DatabaseHandler:
     def __init__(self):
-        self.filename = "users.json"
-        self.users = self.load_users()
-
-    def load_users(self):
-        if os.path.exists(self.filename):
-            with open(self.filename, 'r') as f:
-                return json.load(f)
-        return {}
-
-    def save_users(self):
-        with open(self.filename, 'w') as f:
-            json.dump(self.users, f)
+        self.db = AdvancedDatabase()
 
     def add_user(self, username, password, role, full_name, email):
-        if username in self.users:
-            return False
-        self.users[username] = {
-            'password': password,  # In production, use hashing
-            'role': role,
-            'full_name': full_name,
-            'email': email
-        }
-        self.save_users()
-        return True
+        return self.db.add_user(username, password, role, full_name, email)
 
     def verify_user(self, username, password):
-        if username in self.users and self.users[username]['password'] == password:
+        user_data = self.db.verify_user(username, password)
+        if user_data:
             return User(
-                username,
-                password,
-                self.users[username]['role'],
-                self.users[username]['full_name'],
-                self.users[username]['email']
+                username=user_data['username'],
+                password=password,
+                role=user_data['role'],
+                full_name=user_data['full_name'],
+                email=user_data['email']
             )
         return None
 
