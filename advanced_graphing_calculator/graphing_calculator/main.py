@@ -572,6 +572,30 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(self.second_expr_input)
         sidebar_layout.addWidget(input_group)
 
+        # Variable selector and range controls
+        controls_group = QWidget()
+        controls_layout = QVBoxLayout(controls_group)
+
+        # Variable selector
+        var_group = QWidget()
+        var_layout = QHBoxLayout(var_group)
+        var_label = QLabel("Variable:")
+        var_label.setStyleSheet("color: white; font-weight: bold;")
+        self.var_selector = QComboBox()
+        self.var_selector.addItems(['x', 'y', 't', 'a', 'b', 'c'])
+        self.var_selector.setStyleSheet("""
+                    QComboBox {
+                        background-color: #2d2d2d;
+                        color: white;
+                        border: 2px solid #3d3d3d;
+                        border-radius: 4px;
+                        padding: 5px;
+                    }
+                """)
+        var_layout.addWidget(var_label)
+        var_layout.addWidget(self.var_selector)
+        controls_layout.addWidget(var_group)
+
         # Add range controls
         # Range controls with dark theme
         range_group = QWidget()
