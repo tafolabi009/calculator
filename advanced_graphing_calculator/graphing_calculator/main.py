@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QDoubleSpinBox,
                              QTextEdit, QMessageBox, QGridLayout,
                              QListWidget, QInputDialog, QFileDialog)
+from PyQt6.QtWidgets import QFileDialog
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -118,9 +119,126 @@ class GraphCanvas(FigureCanvas):
         self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
         input_layout.addWidget(self.second_expr_input)
 
-        # Add range group to input layout
+        # Add range and variable controls after the expression inputs
+        range_group = QWidget()
+        range_layout = QGridLayout(range_group)
+        range_layout.setSpacing(10)
+
+        # Variable selector
+        var_label = QLabel("Variable:")
+        var_label.setStyleSheet("color: white; font-weight: bold;")
+        self.var_selector = QComboBox()
+        self.var_selector.addItems(['x', 'y', 't'])
+        self.var_selector.setStyleSheet("""
+            QComboBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(var_label, 0, 0)
+        range_layout.addWidget(self.var_selector, 0, 1, 1, 3)
+
+        # X range
+        x_range_label = QLabel("X Range:")
+        x_range_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(x_range_label, 1, 0)
+
+        self.x_min = QDoubleSpinBox()
+        self.x_min.setRange(-1000, 1000)
+        self.x_min.setValue(-10)
+        self.x_min.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.x_min, 1, 1)
+
+        x_to_label = QLabel("to")
+        x_to_label.setStyleSheet("color: white;")
+        range_layout.addWidget(x_to_label, 1, 2)
+
+        self.x_max = QDoubleSpinBox()
+        self.x_max.setRange(-1000, 1000)
+        self.x_max.setValue(10)
+        self.x_max.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.x_max, 1, 3)
+
+        # Y range
+        y_range_label = QLabel("Y Range:")
+        y_range_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(y_range_label, 2, 0)
+
+        self.y_min = QDoubleSpinBox()
+        self.y_min.setRange(-1000, 1000)
+        self.y_min.setValue(-10)
+        self.y_min.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.y_min, 2, 1)
+
+        y_to_label = QLabel("to")
+        y_to_label.setStyleSheet("color: white;")
+        range_layout.addWidget(y_to_label, 2, 2)
+
+        self.y_max = QDoubleSpinBox()
+        self.y_max.setRange(-1000, 1000)
+        self.y_max.setValue(10)
+        self.y_max.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.y_max, 2, 3)
+
+        # Scale type
+        scale_label = QLabel("Scale:")
+        scale_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(scale_label, 3, 0)
+
+        self.scale_type = QComboBox()
+        self.scale_type.addItems(['Radians', 'Degrees'])
+        self.scale_type.setStyleSheet("""
+            QComboBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.scale_type, 3, 1, 1, 3)
+
         input_layout.addWidget(range_group)
 
+        # Add Load Graphs button
+        load_graphs_btn = ModernButton("Load Graphs")
+        load_graphs_btn.clicked.connect(self.load_user_graphs)
+        input_layout.addWidget(load_graphs_btn)
         # Add input group to sidebar
         sidebar_layout.addWidget(input_group)
 
@@ -784,7 +902,7 @@ class MainWindow(QMainWindow):
             # Create graph object
             graph = Graph(
                 expression=expression,
-                variable='x',
+                variable=self.var_selector.currentText(),
                 start=float(self.x_min.value()),
                 end=float(self.x_max.value()),
                 scale_type=self.scale_type.currentText().lower(),
@@ -959,31 +1077,37 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Error", "Please enter an expression")
                 return
 
+            # Get ranges and settings
             x_min = self.x_min.value()
             x_max = self.x_max.value()
             y_min = self.y_min.value()
             y_max = self.y_max.value()
+            variable = self.var_selector.currentText()
             scale_type = self.scale_type.currentText().lower()
 
             # Generate x values
             x_values = np.linspace(x_min, x_max, 1000)
 
-            # Generate y values using evaluate_expression
+            # Generate y values using evaluate_expression with selected variable
             y_values = [
-                self.calculator.evaluate_expression(expression, x, scale_type)
+                self.calculator.evaluate_expression(
+                    expression.replace(variable, str(x)),
+                    x,
+                    scale_type
+                )
                 for x in x_values
             ]
 
             # Plot the graph
-            self.canvas.axes.plot(x_values, y_values, label='Graph')
+            self.canvas.axes.plot(x_values, y_values, label=expression)
 
             # Set axis limits
             self.canvas.axes.set_xlim(x_min, x_max)
             self.canvas.axes.set_ylim(y_min, y_max)
 
             # Add labels and legend
-            self.canvas.axes.set_xlabel("x")
-            self.canvas.axes.set_ylabel("y")
+            self.canvas.axes.set_xlabel(variable)
+            self.canvas.axes.set_ylabel("f(" + variable + ")")
             self.canvas.axes.legend()
 
             # Refresh the canvas
@@ -1002,46 +1126,25 @@ class MainWindow(QMainWindow):
                         self.history_list.addItem(graph_name)
 
             def save_graph(self):
-                """Save the current graph"""
+                """Save the current graph to a JSON file"""
                 try:
                     expression = self.expr_input.text().strip()
                     if not expression:
-                        QMessageBox.warning(self, "Error", "Please enter an expression")
+                        QMessageBox.warning(self, "Error", "Please enter an expression first")
                         return
 
-                    name, ok = QInputDialog.getText(self, "Save Graph", "Enter a name for the graph:")
+                    name, ok = QInputDialog.getText(self, "Save Graph", "Enter a name for this graph:")
                     if ok and name:
                         graph = Graph(
                             expression=expression,
-                            variable='x',
-                            start=float(self.x_min.value()),
-                            end=float(self.x_max.value()),
+                            variable=self.var_selector.currentText(),
+                            start=self.x_min.value(),
+                            end=self.x_max.value(),
                             scale_type=self.scale_type.currentText().lower()
                         )
-
-                        # Save to calculator
                         self.calculator.save_graph(name, graph)
-
-                        # Ask user where to save the JSON file
-                        file_name, _ = QFileDialog.getSaveFileName(
-                            self,
-                            "Save Graph Data",
-                            f"{name}.json",
-                            "JSON Files (*.json);;All Files (*)"
-                        )
-
-                        if file_name:
-                            # Save to file
-                            self.calculator.save_graphs(file_name)
-
-                            # If this is a student graph, also save PNG
-                            if self.current_user and self.current_user.role == 'student':
-                                png_file = file_name.rsplit('.', 1)[0] + '.png'
-                                self.canvas.figure.savefig(png_file)
-
-                            QMessageBox.information(self, "Success", "Graph saved successfully!")
-                            self.update_history()
-
+                        QMessageBox.information(self, "Success", "Graph saved successfully!")
+                        self.update_history()
                 except Exception as e:
                     QMessageBox.critical(self, "Error", f"Error saving graph: {str(e)}")
 
