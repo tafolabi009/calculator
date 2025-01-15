@@ -1,23 +1,20 @@
-import sys
-import os
-from datetime import datetime
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                            QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
-                            QStackedWidget, QScrollArea, QSpinBox, QDoubleSpinBox,
-                            QTabWidget, QTextEdit, QMessageBox, QGridLayout,
-                            QListWidget, QInputDialog, QFileDialog)
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QPalette, QColor, QFont
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
-import numpy as np
-from typing import Optional, Dict, List
 import json
+import sys
 from datetime import datetime
 
-from graphing_calculator import GraphingCalculator, Graph
+import numpy as np
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPalette, QColor
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                             QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
+                             QDoubleSpinBox,
+                             QTextEdit, QMessageBox, QGridLayout,
+                             QListWidget, QInputDialog, QFileDialog)
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+
 from auth_system import User
+from graphing_calculator import GraphingCalculator, Graph
 
 
 class DarkPalette(QPalette):
@@ -277,6 +274,44 @@ class GraphCanvas(FigureCanvas):
             }
         """)
         range_layout.addWidget(self.x_max)
+
+        # After the X range controls in MainWindow.__init__
+        # Y range
+        y_range_label = QLabel("Y Range:")
+        y_range_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(y_range_label, 1, 0)
+
+        self.y_min = QDoubleSpinBox()
+        self.y_min.setRange(-1000, 1000)
+        self.y_min.setValue(-10)
+        self.y_min.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.y_min, 1, 1)
+
+        y_to_label = QLabel("to")
+        y_to_label.setStyleSheet("color: white;")
+        range_layout.addWidget(y_to_label, 1, 2)
+
+        self.y_max = QDoubleSpinBox()
+        self.y_max.setRange(-1000, 1000)
+        self.y_max.setValue(10)
+        self.y_max.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.y_max, 1, 3)
 
         # Scale type
         scale_label = QLabel("Scale:")
@@ -709,6 +744,35 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error saving graph image: {str(e)}")
 
+    def load_student_list(self):
+        """Load list of students for teacher view"""
+        if not self.current_user or self.current_user.role != 'teacher':
+            return
+
+        try:
+            # Load users from the database
+            with open('users.json', 'r') as f:
+                users_data = json.load(f)
+
+            # Filter for student users
+            students = [
+                username for username, data in users_data.items()
+                if data['role'] == 'student'
+            ]
+
+            # Update the student selector
+            self.student_selector.clear()
+            if students:
+                self.student_selector.addItems(students)
+                self.student_list = students
+            else:
+                QMessageBox.information(self, "Info", "No students found")
+
+        except FileNotFoundError:
+            QMessageBox.warning(self, "Warning", "No user database found")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading student list: {str(e)}")
+
     def handle_logout(self):
         """Handle user logout"""
         try:
@@ -886,7 +950,14 @@ class MainWindow(QMainWindow):
             if file_name:
                 self.calculator.load_graphs(file_name)
                 self.update_history()
+
+                # Load the first graph if available
+                if self.history_list.count() > 0:
+                    first_item = self.history_list.item(0)
+                    self.load_graph_from_history(first_item)
+
                 QMessageBox.information(self, "Success", "Graphs loaded successfully!")
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
 
@@ -906,21 +977,28 @@ class MainWindow(QMainWindow):
 
     def load_graph_from_history(self, item):
         """Load and display a graph from history when selected"""
+        if not item:
+            return
+
         graph_name = item.text()
         if graph_name in self.calculator.graphs:
-            graph = self.calculator.graphs[graph_name]
+            try:
+                graph = self.calculator.graphs[graph_name]
 
-            # Update UI controls with graph data
-            self.expr_input.setText(graph.expression)
-            if hasattr(graph, 'second_expression') and graph.second_expression:
-                self.second_expr_input.setText(graph.second_expression)
-            else:
-                self.second_expr_input.clear()
+                # Update UI controls with graph data
+                self.expr_input.setText(graph.expression)
+                self.x_min.setValue(graph.start)
+                self.x_max.setValue(graph.end)
+                self.scale_type.setCurrentText(graph.scale_type.capitalize())
 
-            self.plot_graph()
+                # Plot the graph
+                self.plot_graph()
 
-            # Update comments
-            self.update_comments(graph_name)
+                # Update comments
+                self.update_comments(graph_name)
+
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error loading graph: {str(e)}")
 
     def plot_graph(self):
         try:
@@ -936,6 +1014,8 @@ class MainWindow(QMainWindow):
 
             x_min = self.x_min.value()
             x_max = self.x_max.value()
+            y_min = self.y_min.value()
+            y_max = self.y_max.value()
             scale_type = self.scale_type.currentText().lower()
 
             # Generate x values
@@ -949,15 +1029,18 @@ class MainWindow(QMainWindow):
 
             # Plot the graph
             self.canvas.axes.plot(x_values, y_values, label='Graph')
-            self.canvas.axes.legend()
+
+            # Set axis limits
+            self.canvas.axes.set_xlim(x_min, x_max)
+            self.canvas.axes.set_ylim(y_min, y_max)
+
+            # Add labels and legend
             self.canvas.axes.set_xlabel("x")
             self.canvas.axes.set_ylabel("y")
-            self.canvas.draw()
+            self.canvas.axes.legend()
 
-        except ValueError as e:
-            QMessageBox.critical(self, "Error", f"Error plotting graph: {str(e)}")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Unexpected error: {str(e)}")
+            # Draw the plot
+            self.canvas.draw()
 
         except ValueError as e:
             QMessageBox.critical(self, "Error", f"Error plotting graph: {str(e)}")
