@@ -456,7 +456,6 @@ class MainWindow(QMainWindow):
 
         layout.addStretch()  # Add stretch to push everything to the top
 
-
     def set_user(self, user: User):
         """Set the current user and update UI accordingly"""
         try:
@@ -466,21 +465,17 @@ class MainWindow(QMainWindow):
             # Update UI based on user role
             if user.role == "teacher":
                 self.teacher_controls.show()
-                self.student_comments_widget.hide()
+                self.student_view.hide()
                 self.load_student_list()
             else:
                 self.teacher_controls.hide()
-                self.student_comments_widget.show()
+                self.student_view.show()
 
-            # Update user info label
+            # Update user info
             self.user_info.setText(f"Welcome, {user.full_name}\n({user.role.capitalize()})")
 
-            # Clear any existing graphs
-            self.calculator.clear_graphs()
-            self.update_history()
-
-            # Update UI layout
-            self.adjustSize()
+            # Load user's graphs
+            self.load_user_graphs()
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
@@ -743,6 +738,14 @@ class MainWindow(QMainWindow):
         self.student_selector.currentIndexChanged.connect(self.load_selected_student_graphs)
         teacher_layout.addWidget(self.student_selector)
 
+        # Add graph preview
+        preview_label = QLabel("Student Graph Preview:")
+        preview_label.setStyleSheet("color: white; font-weight: bold;")
+        layout.addWidget(preview_label)
+
+        self.student_graph_preview = GraphCanvas(self.calculator)
+        layout.addWidget(self.student_graph_preview)
+
         # Add student graph history
         student_history_label = QLabel("Student Graph History")
         student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
@@ -884,6 +887,93 @@ class MainWindow(QMainWindow):
 
         # Apply dark theme
         self.setPalette(DarkPalette())
+
+    def load_student_graph(self, item):
+        """Load and display the selected student's graph"""
+        if not item:
+            return
+
+        try:
+            graph_name = item.text()
+            graph_data = self.student_graph_data[graph_name]
+
+            # Update preview
+            self.student_graph_preview.axes.clear()
+            self.student_graph_preview.axes.grid(True, color='#666666')
+
+            x_values = np.linspace(graph_data['x_min'], graph_data['x_max'], 1000)
+            y_values = [
+                self.calculator.evaluate_expression(
+                    graph_data['expression'],
+                    x,
+                    graph_data['scale_type']
+                )
+                for x in x_values
+            ]
+
+            self.student_graph_preview.axes.plot(x_values, y_values)
+            self.student_graph_preview.axes.set_xlim(graph_data['x_min'], graph_data['x_max'])
+            self.student_graph_preview.axes.set_ylim(graph_data['y_min'], graph_data['y_max'])
+            self.student_graph_preview.draw()
+
+            # Update comments
+            self.update_comments(graph_name)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading student graph: {str(e)}")
+
+    def load_user_graphs(self):
+        """Load graphs for the current user"""
+        if not self.current_user:
+            QMessageBox.warning(self, "Error", "Please log in first")
+            return
+
+        try:
+            db = AdvancedDatabase()
+            graphs = db.get_user_graph_history(self.current_user.id)
+
+            if not graphs:
+                QMessageBox.information(self, "Info", "No saved graphs found")
+                return
+
+            # Update history list
+            self.history_list.clear()
+            self.graph_data = {}
+
+            for graph in graphs:
+                self.history_list.addItem(graph['name'])
+                self.graph_data[graph['name']] = graph
+
+            # Load first graph if available
+            if self.history_list.count() > 0:
+                self.load_graph_from_history(self.history_list.item(0))
+                QMessageBox.information(self, "Success", "Graphs loaded successfully!")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
+
+    def setup_student_view(self):
+        """Setup the student view components"""
+        self.student_view = QWidget()
+        layout = QVBoxLayout(self.student_view)
+
+        # Comments section
+        comments_label = QLabel("Teacher Comments")
+        comments_label.setStyleSheet("color: white; font-weight: bold;")
+        layout.addWidget(comments_label)
+
+        self.comments_list = QListWidget()
+        self.comments_list.setStyleSheet("""
+            QListWidget {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+            }
+        """)
+        layout.addWidget(self.comments_list)
+
+        return self.student_view
 
     def save_graph_image(self):
         """Save the current graph as a PNG image"""
