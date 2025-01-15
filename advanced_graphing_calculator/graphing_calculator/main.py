@@ -118,107 +118,6 @@ class GraphCanvas(FigureCanvas):
         self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
         input_layout.addWidget(self.second_expr_input)
 
-        # Add x range controls
-        # Add after the expression inputs
-        # Range controls
-        range_group = QWidget()
-        range_layout = QGridLayout(range_group)
-        range_layout.setSpacing(10)
-
-        # X range
-        x_range_label = QLabel("X Range:")
-        x_range_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(x_range_label, 0, 0)
-
-        self.x_min = QDoubleSpinBox()
-        self.x_min.setRange(-1000, 1000)
-        self.x_min.setValue(-10)
-        self.x_min.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.x_min, 0, 1)
-
-        x_to_label = QLabel("to")
-        x_to_label.setStyleSheet("color: white;")
-        range_layout.addWidget(x_to_label, 0, 2)
-
-        self.x_max = QDoubleSpinBox()
-        self.x_max.setRange(-1000, 1000)
-        self.x_max.setValue(10)
-        self.x_max.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.x_max, 0, 3)
-
-        # Y range
-        y_range_label = QLabel("Y Range:")
-        y_range_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(y_range_label, 1, 0)
-
-        self.y_min = QDoubleSpinBox()
-        self.y_min.setRange(-1000, 1000)
-        self.y_min.setValue(-10)
-        self.y_min.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.y_min, 1, 1)
-
-        y_to_label = QLabel("to")
-        y_to_label.setStyleSheet("color: white;")
-        range_layout.addWidget(y_to_label, 1, 2)
-
-        self.y_max = QDoubleSpinBox()
-        self.y_max.setRange(-1000, 1000)
-        self.y_max.setValue(10)
-        self.y_max.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.y_max, 1, 3)
-
-        # Scale type
-        scale_label = QLabel("Scale:")
-        scale_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(scale_label, 2, 0)
-
-        self.scale_type = QComboBox()
-        self.scale_type.addItems(['Radians', 'Degrees'])
-        self.scale_type.setStyleSheet("""
-            QComboBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.scale_type, 2, 1, 1, 3)
-
-        input_layout.addWidget(range_group)
-
         # Add range group to input layout
         input_layout.addWidget(range_group)
 
@@ -258,118 +157,10 @@ class GraphCanvas(FigureCanvas):
         self.axes.tick_params(axis='x', colors='#666666')
         self.axes.tick_params(axis='y', colors='#666666')
         # Add these to the __init__ after creating the main layout
-        self.x_min = QDoubleSpinBox()
-        self.x_min.setRange(-1000, 1000)
-        self.x_min.setValue(-10)
-        self.x_min.setDecimals(2)
-
-        self.x_max = QDoubleSpinBox()
-        self.x_max.setRange(-1000, 1000)
-        self.x_max.setValue(10)
-        self.x_max.setDecimals(2)
 
         self.scale_type = QComboBox()
         self.scale_type.addItems(['Radians', 'Degrees'])
-        # Add x range controls
-        range_group = QWidget()
-        range_layout = QHBoxLayout(range_group)
 
-        # X minimum
-        x_min_label = QLabel("X Min:")
-        x_min_label.setStyleSheet("color: white;")
-        range_layout.addWidget(x_min_label)
-
-        self.x_min = QDoubleSpinBox()
-        self.x_min.setRange(-1000, 1000)
-        self.x_min.setValue(-10)
-        self.x_min.setDecimals(2)
-        self.x_min.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.x_min)
-
-        # X maximum
-        x_max_label = QLabel("X Max:")
-        x_max_label.setStyleSheet("color: white;")
-        range_layout.addWidget(x_max_label)
-
-        self.x_max = QDoubleSpinBox()
-        self.x_max.setRange(-1000, 1000)
-        self.x_max.setValue(10)
-        self.x_max.setDecimals(2)
-        self.x_max.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.x_max)
-
-        # After the X range controls in MainWindow.__init__
-        # Y range
-        y_range_label = QLabel("Y Range:")
-        y_range_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(y_range_label, 1, 0)
-
-        self.y_min = QDoubleSpinBox()
-        self.y_min.setRange(-1000, 1000)
-        self.y_min.setValue(-10)
-        self.y_min.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.y_min, 1, 1)
-
-        y_to_label = QLabel("to")
-        y_to_label.setStyleSheet("color: white;")
-        range_layout.addWidget(y_to_label, 1, 2)
-
-        self.y_max = QDoubleSpinBox()
-        self.y_max.setRange(-1000, 1000)
-        self.y_max.setValue(10)
-        self.y_max.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.y_max, 1, 3)
-
-        # Scale type
-        scale_label = QLabel("Scale:")
-        scale_label.setStyleSheet("color: white;")
-        range_layout.addWidget(scale_label)
-
-        self.scale_type = QComboBox()
-        self.scale_type.addItems(['Radians', 'Degrees'])
-        self.scale_type.setStyleSheet("""
-            QComboBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.scale_type)
-        # Add range group to input layout
 
 
 class MainWindow(QMainWindow):
@@ -378,15 +169,157 @@ class MainWindow(QMainWindow):
         self.calculator = calculator
         self.current_user = None
 
-        # Create main layout first
-        self.main_layout = QHBoxLayout()
+        # Create central widget
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
 
-        # Initialize the UI components
-        self.init_ui()
+        # Create main layout
+        layout = QHBoxLayout()
+        central_widget.setLayout(layout)
+
+        # Create sidebar
+        sidebar = QWidget()
+        sidebar.setMinimumWidth(350)
+        sidebar.setMaximumWidth(400)
+        sidebar.setStyleSheet("""
+            QWidget {
+                background-color: #1e1e2e;
+                border-right: 1px solid #333340;
+            }
+        """)
+
+        # Create sidebar layout
+        sidebar_layout = QVBoxLayout()
+        sidebar.setLayout(sidebar_layout)
+
+        # Add components to sidebar
+        self.setup_sidebar_components(sidebar_layout)
+
+        # Create content area
+        content = QWidget()
+        content_layout = QVBoxLayout()
+        content.setLayout(content_layout)
+
+        # Add components to content area
+        self.setup_content_components(content_layout)
+
+        # Add widgets to main layout
+        layout.addWidget(sidebar)
+        layout.addWidget(content)
+
+        # Initialize other instance variables
+        self.history_list = QListWidget()
 
         # Set window properties
-        self.setWindowTitle("Advanced Graphing Calculator")
+        self.setWindowTitle("Graphing Calculator")
         self.setMinimumSize(1200, 800)
+        self.setPalette(DarkPalette())
+
+    def setup_sidebar_components(self, layout):
+        # Header with user info
+        header_widget = QWidget()
+        header_layout = QVBoxLayout()
+        header_widget.setLayout(header_layout)
+
+        self.user_info = QLabel("Not logged in")
+        self.user_info.setStyleSheet("""
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+        """)
+        header_layout.addWidget(self.user_info)
+
+        logout_btn = ModernButton("Logout")
+        logout_btn.clicked.connect(self.handle_logout)
+        header_layout.addWidget(logout_btn)
+
+        layout.addWidget(header_widget)
+
+        # Function input section
+        input_group = QWidget()
+        input_layout = QVBoxLayout()
+        input_group.setLayout(input_layout)
+
+        input_label = QLabel("Function Input")
+        input_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        input_layout.addWidget(input_label)
+
+        self.expr_input = ModernLineEdit()
+        self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
+        input_layout.addWidget(self.expr_input)
+
+        # Add range controls
+        range_group = QWidget()
+        range_layout = QGridLayout()
+        range_group.setLayout(range_layout)
+
+        # X range
+        self.x_min = QDoubleSpinBox()
+        self.x_min.setRange(-1000, 1000)
+        self.x_min.setValue(-10)
+
+        self.x_max = QDoubleSpinBox()
+        self.x_max.setRange(-1000, 1000)
+        self.x_max.setValue(10)
+
+        # Y range
+        self.y_min = QDoubleSpinBox()
+        self.y_min.setRange(-1000, 1000)
+        self.y_min.setValue(-10)
+
+        self.y_max = QDoubleSpinBox()
+        self.y_max.setRange(-1000, 1000)
+        self.y_max.setValue(10)
+
+        # Add range controls to layout
+        range_layout.addWidget(QLabel("X Range:"), 0, 0)
+        range_layout.addWidget(self.x_min, 0, 1)
+        range_layout.addWidget(QLabel("to"), 0, 2)
+        range_layout.addWidget(self.x_max, 0, 3)
+
+        range_layout.addWidget(QLabel("Y Range:"), 1, 0)
+        range_layout.addWidget(self.y_min, 1, 1)
+        range_layout.addWidget(QLabel("to"), 1, 2)
+        range_layout.addWidget(self.y_max, 1, 3)
+
+        input_layout.addWidget(range_group)
+
+        # Scale type
+        self.scale_type = QComboBox()
+        self.scale_type.addItems(['Radians', 'Degrees'])
+        input_layout.addWidget(self.scale_type)
+
+        layout.addWidget(input_group)
+
+        # Add teacher controls
+        self.teacher_controls = self.create_teacher_controls()
+        layout.addWidget(self.teacher_controls)
+        self.teacher_controls.hide()
+
+    def setup_content_components(self, layout):
+        # Graph canvas
+        self.canvas = GraphCanvas()
+        layout.addWidget(self.canvas)
+
+        # Action buttons
+        buttons = QWidget()
+        buttons_layout = QHBoxLayout()
+        buttons.setLayout(buttons_layout)
+
+        plot_btn = ModernButton("Plot Graph")
+        plot_btn.clicked.connect(self.plot_graph)
+        buttons_layout.addWidget(plot_btn)
+
+        save_btn = ModernButton("Save Graph")
+        save_btn.clicked.connect(self.save_graph)
+        buttons_layout.addWidget(save_btn)
+
+        save_image_btn = ModernButton("Save Image")
+        save_image_btn.clicked.connect(self.save_graph_image)
+        buttons_layout.addWidget(save_image_btn)
+
+        layout.addWidget(buttons)
 
 
     def set_user(self, user: User):
@@ -416,31 +349,6 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
-
-    def init_ui(self):
-        """Initialize the user interface"""
-        # Create central widget
-        central_widget = QWidget()
-        central_widget.setLayout(self.main_layout)
-        self.setCentralWidget(central_widget)
-
-        # Create and set up all UI components
-        self.setup_sidebar()
-        self.setup_main_content()
-
-        # Apply dark theme
-        self.setPalette(DarkPalette())
-
-    def setup_sidebar(self):
-        """Set up the sidebar with controls"""
-        sidebar = QWidget()
-        sidebar.setMinimumWidth(350)
-        sidebar.setMaximumWidth(400)
-        sidebar_layout = QVBoxLayout(sidebar)
-
-        # Add all sidebar components here...
-
-        self.main_layout.addWidget(sidebar)
 
     def setup_main_content(self):
         """Set up the main content area"""
