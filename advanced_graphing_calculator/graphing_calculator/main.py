@@ -573,17 +573,18 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(self.second_expr_input)
         sidebar_layout.addWidget(input_group)
 
-        # Variable selector and range controls
+        # Add variable selector and range controls
         controls_group = QWidget()
         controls_layout = QVBoxLayout(controls_group)
 
         # Variable selector
-        var_group = QWidget()
-        var_layout = QHBoxLayout(var_group)
+        var_selector_group = QWidget()
+        var_selector_layout = QHBoxLayout(var_selector_group)
+
         var_label = QLabel("Variable:")
         var_label.setStyleSheet("color: white; font-weight: bold;")
-        self.var_selector = QComboBox()
-        self.var_selector.addItems(['x', 'y', 't', 'a', 'b', 'c'])
+        self.var_selector = QComboBox()  # Make it an instance variable with self
+        self.var_selector.addItems(['x', 'y', 't'])
         self.var_selector.setStyleSheet("""
                     QComboBox {
                         background-color: #2d2d2d;
@@ -593,21 +594,20 @@ class MainWindow(QMainWindow):
                         padding: 5px;
                     }
                 """)
-        var_layout.addWidget(var_label)
-        var_layout.addWidget(self.var_selector)
-        controls_layout.addWidget(var_group)
+        var_selector_layout.addWidget(var_label)
+        var_selector_layout.addWidget(self.var_selector)
+        controls_layout.addWidget(var_selector_group)
 
-        # Add range controls
-        # Range controls with dark theme
+        # Range controls
         range_group = QWidget()
         range_layout = QGridLayout(range_group)
 
-        # X range controls
+        # X range
         x_label = QLabel("X Range:")
         x_label.setStyleSheet("color: white; font-weight: bold;")
         range_layout.addWidget(x_label, 0, 0)
 
-        self.x_min = QDoubleSpinBox()
+        self.x_min = QDoubleSpinBox()  # Make it an instance variable
         self.x_min.setRange(-1000, 1000)
         self.x_min.setValue(-10)
         self.x_min.setStyleSheet("""
@@ -621,11 +621,9 @@ class MainWindow(QMainWindow):
                 """)
         range_layout.addWidget(self.x_min, 0, 1)
 
-        x_to = QLabel("to")
-        x_to.setStyleSheet("color: white;")
-        range_layout.addWidget(x_to, 0, 2)
+        range_layout.addWidget(QLabel("to", styleSheet="color: white;"), 0, 2)
 
-        self.x_max = QDoubleSpinBox()
+        self.x_max = QDoubleSpinBox()  # Make it an instance variable
         self.x_max.setRange(-1000, 1000)
         self.x_max.setValue(10)
         self.x_max.setStyleSheet("""
@@ -639,12 +637,12 @@ class MainWindow(QMainWindow):
                 """)
         range_layout.addWidget(self.x_max, 0, 3)
 
-        # Y range controls
+        # Y range
         y_label = QLabel("Y Range:")
         y_label.setStyleSheet("color: white; font-weight: bold;")
         range_layout.addWidget(y_label, 1, 0)
 
-        self.y_min = QDoubleSpinBox()
+        self.y_min = QDoubleSpinBox()  # Make it an instance variable
         self.y_min.setRange(-1000, 1000)
         self.y_min.setValue(-10)
         self.y_min.setStyleSheet("""
@@ -658,11 +656,9 @@ class MainWindow(QMainWindow):
                 """)
         range_layout.addWidget(self.y_min, 1, 1)
 
-        y_to = QLabel("to")
-        y_to.setStyleSheet("color: white;")
-        range_layout.addWidget(y_to, 1, 2)
+        range_layout.addWidget(QLabel("to", styleSheet="color: white;"), 1, 2)
 
-        self.y_max = QDoubleSpinBox()
+        self.y_max = QDoubleSpinBox()  # Make it an instance variable
         self.y_max.setRange(-1000, 1000)
         self.y_max.setValue(10)
         self.y_max.setStyleSheet("""
@@ -676,6 +672,8 @@ class MainWindow(QMainWindow):
                 """)
         range_layout.addWidget(self.y_max, 1, 3)
 
+        controls_layout.addWidget(range_group)
+        input_layout.addWidget(controls_group)
         # Scale type
         scale_label = QLabel("Scale Type:")
         scale_label.setStyleSheet("color: white; font-weight: bold;")
@@ -983,25 +981,45 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            name, ok = QInputDialog.getText(self, "Save Graph", "Enter a name for this graph:")
-            if ok and name:
-                graph_data = {
-                    'name': name,
-                    'expression': self.expr_input.text(),
-                    'variable': self.var_selector.currentText(),
-                    'x_min': self.x_min.value(),
-                    'x_max': self.x_max.value(),
-                    'y_min': self.y_min.value(),
-                    'y_max': self.y_max.value(),
-                    'scale_type': self.scale_type.currentText().lower()
-                }
+            # Get current graph data
+            expression = self.expr_input.text().strip()
+            if not expression:
+                QMessageBox.warning(self, "Error", "Please enter an expression first")
+                return
 
-                db = AdvancedDatabase()
-                db.save_graph_state(self.current_user.id, graph_data)
-                self.update_history()
-                QMessageBox.information(self, "Success", "Graph saved successfully!")
+            # Get graph name from user
+            name, ok = QInputDialog.getText(self, "Save Graph", "Enter a name for this graph:")
+            if not ok or not name:
+                return
+
+            # Create graph data dictionary
+            graph_data = {
+                'name': name,
+                'expression': expression,
+                'variable': self.var_selector.currentText(),
+                'x_min': self.x_min.value(),
+                'x_max': self.x_max.value(),
+                'y_min': self.y_min.value(),
+                'y_max': self.y_max.value(),
+                'scale_type': self.scale_type.currentText().lower()
+            }
+
+            # Save to database
+            from database import AdvancedDatabase
+            db = AdvancedDatabase()
+            db.save_graph_state(self.current_user.id, graph_data)
+
+            # Update the history list
+            self.update_history()
+
+            QMessageBox.information(self, "Success", "Graph saved successfully!")
+        except AttributeError as e:
+            QMessageBox.critical(self, "Error",
+                                 "Some graph properties are not properly initialized. Please check all values.")
+            print(f"Debug - AttributeError: {str(e)}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error saving graph: {str(e)}")
+            print(f"Debug - General Error: {str(e)}")
 
     def load_user_graphs(self):
         """Load graphs for the current user from database"""
