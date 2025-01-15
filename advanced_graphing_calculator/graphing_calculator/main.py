@@ -314,6 +314,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Advanced Graphing Calculator")
         self.setMinimumSize(1200, 800)
 
+
     def set_user(self, user: User):
         """Set the current user and update UI accordingly"""
         try:
@@ -332,8 +333,12 @@ class MainWindow(QMainWindow):
             # Update user info label
             self.user_info.setText(f"Welcome, {user.full_name}\n({user.role.capitalize()})")
 
-            # Load user's graphs
-            self.load_user_graphs()
+            # Clear any existing graphs
+            self.calculator.clear_graphs()
+            self.update_history()
+
+            # Update UI layout
+            self.adjustSize()
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
@@ -467,6 +472,67 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(self.second_expr_input)
         sidebar_layout.addWidget(input_group)
 
+        # Add range controls
+        range_group = QWidget()
+        range_layout = QGridLayout(range_group)
+
+        # X range
+        x_range_label = QLabel("X Range:")
+        x_range_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(x_range_label, 0, 0)
+
+        self.x_min = QDoubleSpinBox()
+        self.x_min.setRange(-1000, 1000)
+        self.x_min.setValue(-10)
+        self.x_min.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.x_min, 0, 1)
+
+        x_to_label = QLabel("to")
+        x_to_label.setStyleSheet("color: white;")
+        range_layout.addWidget(x_to_label, 0, 2)
+
+        self.x_max = QDoubleSpinBox()
+        self.x_max.setRange(-1000, 1000)
+        self.x_max.setValue(10)
+        self.x_max.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.x_max, 0, 3)
+
+        # Scale type
+        scale_label = QLabel("Scale Type:")
+        scale_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(scale_label, 1, 0)
+
+        self.scale_type = QComboBox()
+        self.scale_type.addItems(['Radians', 'Degrees'])
+        self.scale_type.setStyleSheet("""
+            QComboBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.scale_type, 1, 1, 1, 3)
+
+        input_layout.addWidget(range_group)
+
         # Teacher-specific controls
         self.teacher_controls = QWidget()
         teacher_layout = QVBoxLayout(self.teacher_controls)
@@ -503,7 +569,7 @@ class MainWindow(QMainWindow):
         teacher_layout.addWidget(student_history_label)
 
         self.student_graph_list = QListWidget()
-        self.student_graph_list.setMinimumHeight(200)  # Increased height
+        self.student_graph_list.setMinimumHeight(300)  # Increased height
         self.student_graph_list.setStyleSheet("""
             QListWidget {
                 background-color: #2d2d2d;
@@ -573,6 +639,11 @@ class MainWindow(QMainWindow):
         plot_btn.setMinimumHeight(40)
         plot_btn.clicked.connect(self.plot_graph)
         buttons_layout.addWidget(plot_btn)
+
+        load_graphs_btn = ModernButton("Load Saved Graphs")
+        load_graphs_btn.setMinimumHeight(40)
+        load_graphs_btn.clicked.connect(self.load_user_graphs)
+        sidebar_layout.addWidget(load_graphs_btn)
 
         save_graph_btn = ModernButton("Save Graph")
         save_graph_btn.setMinimumHeight(40)
@@ -674,6 +745,16 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error during logout: {str(e)}")
+
+    def update_history(self):
+        """Update the graph history list."""
+        try:
+            if hasattr(self, 'history_list'):
+                self.history_list.clear()
+                for graph_name in self.calculator.graphs:
+                    self.history_list.addItem(graph_name)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error updating history: {str(e)}")
 
     def save_graph(self):
         """Save the current graph"""
@@ -791,17 +872,23 @@ class MainWindow(QMainWindow):
 
     def load_user_graphs(self):
         """Load graphs for the current user"""
-        if self.current_user:
-            try:
-                file_name, _ = QFileDialog.getOpenFileName(
-                    self, "Load Graph Data", "", "JSON Files (*.json);;All Files (*)"
-                )
-                if file_name:
-                    self.calculator.load_graphs(file_name)
-                    self.update_history()
-                    QMessageBox.information(self, "Success", "Graphs loaded successfully!")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
+        if not self.current_user:
+            QMessageBox.warning(self, "Error", "Please log in first")
+            return
+
+        try:
+            file_name, _ = QFileDialog.getOpenFileName(
+                self,
+                "Load Graph Data",
+                "",
+                "JSON Files (*.json);;All Files (*)"
+            )
+            if file_name:
+                self.calculator.load_graphs(file_name)
+                self.update_history()
+                QMessageBox.information(self, "Success", "Graphs loaded successfully!")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
 
     def load_selected_student_graphs(self):
         selected_student = self.student_selector.currentText()
@@ -843,13 +930,13 @@ class MainWindow(QMainWindow):
 
             # Get input values
             expression = self.expr_input.text().strip()
-            x_min = self.x_min.value()
-            x_max = self.x_max.value()
-            scale_type = self.scale_type.currentText().lower()
-
             if not expression:
                 QMessageBox.warning(self, "Error", "Please enter an expression")
                 return
+
+            x_min = self.x_min.value()
+            x_max = self.x_max.value()
+            scale_type = self.scale_type.currentText().lower()
 
             # Generate x values
             x_values = np.linspace(x_min, x_max, 1000)
@@ -862,11 +949,15 @@ class MainWindow(QMainWindow):
 
             # Plot the graph
             self.canvas.axes.plot(x_values, y_values, label='Graph')
-
-            # Add labels and refresh the canvas
+            self.canvas.axes.legend()
             self.canvas.axes.set_xlabel("x")
             self.canvas.axes.set_ylabel("y")
             self.canvas.draw()
+
+        except ValueError as e:
+            QMessageBox.critical(self, "Error", f"Error plotting graph: {str(e)}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Unexpected error: {str(e)}")
 
         except ValueError as e:
             QMessageBox.critical(self, "Error", f"Error plotting graph: {str(e)}")
