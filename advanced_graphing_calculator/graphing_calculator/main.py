@@ -119,18 +119,20 @@ class GraphCanvas(FigureCanvas):
         input_layout.addWidget(self.second_expr_input)
 
         # Add x range controls
+        # Add after the expression inputs
+        # Range controls
         range_group = QWidget()
-        range_layout = QHBoxLayout(range_group)
+        range_layout = QGridLayout(range_group)
+        range_layout.setSpacing(10)
 
-        # X minimum
-        x_min_label = QLabel("X Min:")
-        x_min_label.setStyleSheet("color: white;")
-        range_layout.addWidget(x_min_label)
+        # X range
+        x_range_label = QLabel("X Range:")
+        x_range_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(x_range_label, 0, 0)
 
         self.x_min = QDoubleSpinBox()
         self.x_min.setRange(-1000, 1000)
         self.x_min.setValue(-10)
-        self.x_min.setDecimals(2)
         self.x_min.setStyleSheet("""
             QDoubleSpinBox {
                 background-color: #2d2d2d;
@@ -140,17 +142,15 @@ class GraphCanvas(FigureCanvas):
                 padding: 5px;
             }
         """)
-        range_layout.addWidget(self.x_min)
+        range_layout.addWidget(self.x_min, 0, 1)
 
-        # X maximum
-        x_max_label = QLabel("X Max:")
-        x_max_label.setStyleSheet("color: white;")
-        range_layout.addWidget(x_max_label)
+        x_to_label = QLabel("to")
+        x_to_label.setStyleSheet("color: white;")
+        range_layout.addWidget(x_to_label, 0, 2)
 
         self.x_max = QDoubleSpinBox()
         self.x_max.setRange(-1000, 1000)
         self.x_max.setValue(10)
-        self.x_max.setDecimals(2)
         self.x_max.setStyleSheet("""
             QDoubleSpinBox {
                 background-color: #2d2d2d;
@@ -160,12 +160,49 @@ class GraphCanvas(FigureCanvas):
                 padding: 5px;
             }
         """)
-        range_layout.addWidget(self.x_max)
+        range_layout.addWidget(self.x_max, 0, 3)
+
+        # Y range
+        y_range_label = QLabel("Y Range:")
+        y_range_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(y_range_label, 1, 0)
+
+        self.y_min = QDoubleSpinBox()
+        self.y_min.setRange(-1000, 1000)
+        self.y_min.setValue(-10)
+        self.y_min.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.y_min, 1, 1)
+
+        y_to_label = QLabel("to")
+        y_to_label.setStyleSheet("color: white;")
+        range_layout.addWidget(y_to_label, 1, 2)
+
+        self.y_max = QDoubleSpinBox()
+        self.y_max.setRange(-1000, 1000)
+        self.y_max.setValue(10)
+        self.y_max.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        range_layout.addWidget(self.y_max, 1, 3)
 
         # Scale type
         scale_label = QLabel("Scale:")
-        scale_label.setStyleSheet("color: white;")
-        range_layout.addWidget(scale_label)
+        scale_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(scale_label, 2, 0)
 
         self.scale_type = QComboBox()
         self.scale_type.addItems(['Radians', 'Degrees'])
@@ -178,7 +215,9 @@ class GraphCanvas(FigureCanvas):
                 padding: 5px;
             }
         """)
-        range_layout.addWidget(self.scale_type)
+        range_layout.addWidget(self.scale_type, 2, 1, 1, 3)
+
+        input_layout.addWidget(range_group)
 
         # Add range group to input layout
         input_layout.addWidget(range_group)
@@ -1039,7 +1078,7 @@ class MainWindow(QMainWindow):
             self.canvas.axes.set_ylabel("y")
             self.canvas.axes.legend()
 
-            # Draw the plot
+            # Refresh the canvas
             self.canvas.draw()
 
         except ValueError as e:
