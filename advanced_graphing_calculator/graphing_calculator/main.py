@@ -978,6 +978,108 @@ class MainWindow(QMainWindow):
                 except Exception as e:
                     QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
 
+            def create_user_info_section(self, parent_layout):
+                # User info
+                self.user_info = QLabel("Not logged in")
+                self.user_info.setStyleSheet("""
+                    color: white;
+                    font-size: 18px;
+                    font-weight: bold;
+                    padding: 10px;
+                """)
+                parent_layout.addWidget(self.user_info)
+
+                # Logout button
+                logout_btn = ModernButton("Logout")
+                logout_btn.clicked.connect(self.handle_logout)
+                parent_layout.addWidget(logout_btn)
+
+            def create_input_section(self, parent_layout):
+                # Function input group
+                input_group = QWidget()
+                input_layout = QVBoxLayout(input_group)
+
+                # Function input
+                self.expr_input = ModernLineEdit()
+                self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
+                input_layout.addWidget(self.expr_input)
+
+                # Secondary input
+                self.second_expr_input = ModernLineEdit()
+                self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
+                input_layout.addWidget(self.second_expr_input)
+
+                parent_layout.addWidget(input_group)
+
+            def create_range_controls(self, parent_layout):
+                range_group = QWidget()
+                range_layout = QHBoxLayout(range_group)
+
+                # X range controls
+                self.x_min = QDoubleSpinBox()
+                self.x_min.setRange(-1000, 1000)
+                self.x_min.setValue(-10)
+                range_layout.addWidget(QLabel("X Min:"))
+                range_layout.addWidget(self.x_min)
+
+                self.x_max = QDoubleSpinBox()
+                self.x_max.setRange(-1000, 1000)
+                self.x_max.setValue(10)
+                range_layout.addWidget(QLabel("X Max:"))
+                range_layout.addWidget(self.x_max)
+
+                # Scale type
+                self.scale_type = QComboBox()
+                self.scale_type.addItems(['Radians', 'Degrees'])
+                range_layout.addWidget(QLabel("Scale:"))
+                range_layout.addWidget(self.scale_type)
+
+                parent_layout.addWidget(range_group)
+
+            def create_teacher_controls(self, parent_layout):
+                self.teacher_controls = QWidget()
+                teacher_layout = QVBoxLayout(self.teacher_controls)
+
+                # Student selector
+                self.student_selector = QComboBox()
+                self.student_selector.setEditable(True)
+                teacher_layout.addWidget(self.student_selector)
+
+                # Graph history
+                self.history_list = QListWidget()
+                teacher_layout.addWidget(self.history_list)
+
+                # Comments
+                self.comment_input = QTextEdit()
+                self.comment_input.setPlaceholderText("Write a comment...")
+                teacher_layout.addWidget(self.comment_input)
+
+                # Add comment button
+                add_comment_btn = ModernButton("Add Comment")
+                add_comment_btn.clicked.connect(self.add_comment)
+                teacher_layout.addWidget(add_comment_btn)
+
+                parent_layout.addWidget(self.teacher_controls)
+                self.teacher_controls.hide()  # Hidden by default
+
+            def create_action_buttons(self, parent_layout):
+                buttons_container = QWidget()
+                buttons_layout = QHBoxLayout(buttons_container)
+
+                plot_btn = ModernButton("Plot Graph")
+                plot_btn.clicked.connect(self.plot_graph)
+                buttons_layout.addWidget(plot_btn)
+
+                save_btn = ModernButton("Save Graph")
+                save_btn.clicked.connect(self.save_graph)
+                buttons_layout.addWidget(save_btn)
+
+                save_image_btn = ModernButton("Save Image")
+                save_image_btn.clicked.connect(self.save_graph_image)
+                buttons_layout.addWidget(save_image_btn)
+
+                parent_layout.addWidget(buttons_container)
+
             def load_student_list(self):
                 """Load list of students for teacher view"""
                 if not self.current_user or self.current_user.role != 'teacher':
