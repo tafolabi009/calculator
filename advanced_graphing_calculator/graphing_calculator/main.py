@@ -573,66 +573,108 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(input_group)
 
         # Add range controls
+        # Range controls with dark theme
         range_group = QWidget()
         range_layout = QGridLayout(range_group)
 
-        # X range
-        x_range_label = QLabel("X Range:")
-        x_range_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(x_range_label, 0, 0)
+        # X range controls
+        x_label = QLabel("X Range:")
+        x_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(x_label, 0, 0)
 
         self.x_min = QDoubleSpinBox()
         self.x_min.setRange(-1000, 1000)
         self.x_min.setValue(-10)
         self.x_min.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
+                    QDoubleSpinBox {
+                        background-color: #2d2d2d;
+                        color: white;
+                        border: 2px solid #3d3d3d;
+                        border-radius: 4px;
+                        padding: 5px;
+                    }
+                """)
         range_layout.addWidget(self.x_min, 0, 1)
 
-        x_to_label = QLabel("to")
-        x_to_label.setStyleSheet("color: white;")
-        range_layout.addWidget(x_to_label, 0, 2)
+        x_to = QLabel("to")
+        x_to.setStyleSheet("color: white;")
+        range_layout.addWidget(x_to, 0, 2)
 
         self.x_max = QDoubleSpinBox()
         self.x_max.setRange(-1000, 1000)
         self.x_max.setValue(10)
         self.x_max.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
+                    QDoubleSpinBox {
+                        background-color: #2d2d2d;
+                        color: white;
+                        border: 2px solid #3d3d3d;
+                        border-radius: 4px;
+                        padding: 5px;
+                    }
+                """)
         range_layout.addWidget(self.x_max, 0, 3)
+
+        # Y range controls
+        y_label = QLabel("Y Range:")
+        y_label.setStyleSheet("color: white; font-weight: bold;")
+        range_layout.addWidget(y_label, 1, 0)
+
+        self.y_min = QDoubleSpinBox()
+        self.y_min.setRange(-1000, 1000)
+        self.y_min.setValue(-10)
+        self.y_min.setStyleSheet("""
+                    QDoubleSpinBox {
+                        background-color: #2d2d2d;
+                        color: white;
+                        border: 2px solid #3d3d3d;
+                        border-radius: 4px;
+                        padding: 5px;
+                    }
+                """)
+        range_layout.addWidget(self.y_min, 1, 1)
+
+        y_to = QLabel("to")
+        y_to.setStyleSheet("color: white;")
+        range_layout.addWidget(y_to, 1, 2)
+
+        self.y_max = QDoubleSpinBox()
+        self.y_max.setRange(-1000, 1000)
+        self.y_max.setValue(10)
+        self.y_max.setStyleSheet("""
+                    QDoubleSpinBox {
+                        background-color: #2d2d2d;
+                        color: white;
+                        border: 2px solid #3d3d3d;
+                        border-radius: 4px;
+                        padding: 5px;
+                    }
+                """)
+        range_layout.addWidget(self.y_max, 1, 3)
 
         # Scale type
         scale_label = QLabel("Scale Type:")
         scale_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(scale_label, 1, 0)
+        range_layout.addWidget(scale_label, 2, 0)
 
         self.scale_type = QComboBox()
         self.scale_type.addItems(['Radians', 'Degrees'])
         self.scale_type.setStyleSheet("""
-            QComboBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.scale_type, 1, 1, 1, 3)
+                    QComboBox {
+                        background-color: #2d2d2d;
+                        color: white;
+                        border: 2px solid #3d3d3d;
+                        border-radius: 4px;
+                        padding: 5px;
+                    }
+                """)
+        range_layout.addWidget(self.scale_type, 2, 1, 1, 3)
 
         input_layout.addWidget(range_group)
 
+        # Add after the range controls
+        load_graphs_btn = ModernButton("Load Graphs")
+        load_graphs_btn.clicked.connect(self.load_user_graphs)
+        input_layout.addWidget(load_graphs_btn)
         # Teacher-specific controls
         self.teacher_controls = QWidget()
         teacher_layout = QVBoxLayout(self.teacher_controls)
@@ -1077,37 +1119,31 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Error", "Please enter an expression")
                 return
 
-            # Get ranges and settings
             x_min = self.x_min.value()
             x_max = self.x_max.value()
             y_min = self.y_min.value()
             y_max = self.y_max.value()
-            variable = self.var_selector.currentText()
             scale_type = self.scale_type.currentText().lower()
 
             # Generate x values
             x_values = np.linspace(x_min, x_max, 1000)
 
-            # Generate y values using evaluate_expression with selected variable
+            # Generate y values using evaluate_expression
             y_values = [
-                self.calculator.evaluate_expression(
-                    expression.replace(variable, str(x)),
-                    x,
-                    scale_type
-                )
+                self.calculator.evaluate_expression(expression, x, scale_type)
                 for x in x_values
             ]
 
             # Plot the graph
-            self.canvas.axes.plot(x_values, y_values, label=expression)
+            self.canvas.axes.plot(x_values, y_values, label='Graph')
 
             # Set axis limits
             self.canvas.axes.set_xlim(x_min, x_max)
             self.canvas.axes.set_ylim(y_min, y_max)
 
             # Add labels and legend
-            self.canvas.axes.set_xlabel(variable)
-            self.canvas.axes.set_ylabel("f(" + variable + ")")
+            self.canvas.axes.set_xlabel("x")
+            self.canvas.axes.set_ylabel("y")
             self.canvas.axes.legend()
 
             # Refresh the canvas

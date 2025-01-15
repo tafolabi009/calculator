@@ -76,6 +76,48 @@ class ModernButton(QPushButton):
                 background-color: #0D47A1;
             }
         """)
+    DARK_STYLE = """
+        QWidget {
+            background-color: #1e1e2e;
+            color: white;
+        }
+        QLabel {
+            color: white;
+            font-size: 14px;
+        }
+        QLineEdit {
+            background-color: #2d2d2d;
+            border: 2px solid #3d3d3d;
+            border-radius: 4px;
+            color: white;
+            padding: 6px;
+            font-size: 14px;
+        }
+        QLineEdit:focus {
+            border: 2px solid #2a82da;
+        }
+        QPushButton {
+            background-color: #2a82da;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        QPushButton:hover {
+            background-color: #3292ea;
+        }
+        QPushButton:pressed {
+            background-color: #1a72ca;
+        }
+        QComboBox {
+            background-color: #2d2d2d;
+            border: 2px solid #3d3d3d;
+            border-radius: 4px;
+            color: white;
+            padding: 5px;
+        }
+        """
 
 
 class ModernLineEdit(QLineEdit):
