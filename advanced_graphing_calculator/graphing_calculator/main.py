@@ -166,7 +166,6 @@ class GraphCanvas(FigureCanvas):
             }
         """)
         range_layout.addWidget(self.scale_type)
-
         # Add range group to input layout
         input_layout.addWidget(range_group)
 
