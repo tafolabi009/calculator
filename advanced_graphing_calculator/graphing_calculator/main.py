@@ -855,30 +855,33 @@ class MainWindow(QMainWindow):
     def update_comments(self, graph_name):
         """Update the comments list for the selected graph"""
         self.comments_list.clear()
-        if graph_name in self.calculator.graphs:
-            comments = self.calculator.graphs[graph_name].comments
+        if graph_name in self.graph_data:
+            comments = self.graph_data[graph_name]['comments']
             for comment in comments:
-                if isinstance(comment, dict):
-                    item_text = f"{comment['teacher']} ({comment['timestamp']}): {comment['comment']}"
-                else:
-                    item_text = str(comment)
+                item_text = f"{comment['teacher']} ({comment['timestamp']}): {comment['text']}"
                 self.comments_list.addItem(item_text)
 
-    def load_graphs(self, filename=None):
-        """Load graphs from a file"""
-        if not filename and not self.current_user:
+    def load_graphs(self):
+        """Load graphs from the database based on the current user"""
+        if not self.current_user:
+            QMessageBox.warning(self, "Error", "Please log in to load graphs")
             return
 
-        if not filename:
-            filename = f"graphs_{self.current_user.username}.json"
+        try:
+            db = AdvancedDatabase()
+            if self.current_user.role == 'teacher':
+                graphs = db.get_all_graphs()  # Assuming you have a method to get all graphs
+            else:
+                graphs = db.get_user_graphs(self.current_user.id)
 
-        if os.path.exists(filename):
-            with open(filename, 'r') as f:
-                data = json.load(f)
-                self.graphs = {
-                    name: Graph.from_dict(graph_data)
-                    for name, graph_data in data.items()
-                }
+            self.history_list.clear()
+            for graph in graphs:
+                self.history_list.addItem(graph['name'])
+
+            # Store the graph data for reference
+            self.graph_data = {graph['name']: graph for graph in graphs}
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
 
     def save_graph(self):
         """Save the current graph to the database"""
@@ -964,14 +967,12 @@ class MainWindow(QMainWindow):
             db = AdvancedDatabase()
             graphs = db.get_student_graphs(selected_student)
 
-            # Clear and update student graph list
             self.student_graph_list.clear()
             for graph in graphs:
                 self.student_graph_list.addItem(graph['name'])
 
             # Store the graph data for reference
             self.student_graph_data = {graph['name']: graph for graph in graphs}
-
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading student graphs: {str(e)}")
 
@@ -983,7 +984,7 @@ class MainWindow(QMainWindow):
 
         comment_text = self.comment_input.toPlainText().strip()
         if not comment_text:
-            return  # Don't show warning for empty comments on Enter press
+            return
 
         selected_items = self.student_graph_list.selectedItems()
         if not selected_items:
@@ -1000,7 +1001,6 @@ class MainWindow(QMainWindow):
             self.comment_input.clear()
             self.update_comments(graph_name)
             QMessageBox.information(self, "Success", "Comment added successfully!")
-
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error adding comment: {str(e)}")
 

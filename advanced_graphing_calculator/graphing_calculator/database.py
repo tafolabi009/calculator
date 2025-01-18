@@ -175,6 +175,32 @@ class AdvancedDatabase:
             for g in graphs
         ]
 
+    def get_all_graphs(self):
+        """Get all graphs in the database for teachers"""
+        conn = sqlite3.connect(self.db_file)
+        c = conn.cursor()
+        c.execute('''
+            SELECT id, name, expression, variable, x_min, x_max, y_min, y_max, scale_type
+            FROM graphs
+            ORDER BY created_at DESC
+        ''')
+        graphs = c.fetchall()
+        conn.close()
+
+        return [
+            {
+                'id': g[0],
+                'name': g[1],
+                'expression': g[2],
+                'variable': g[3],
+                'x_min': g[4],
+                'x_max': g[5],
+                'y_min': g[6],
+                'y_max': g[7],
+                'scale_type': g[8]
+            }
+            for g in graphs
+        ]
     def add_comment(self, graph_id, teacher_id, comment_text):
         """Add a comment to a graph"""
         conn = sqlite3.connect(self.db_file)
