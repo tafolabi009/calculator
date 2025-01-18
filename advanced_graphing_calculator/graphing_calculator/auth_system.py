@@ -298,17 +298,14 @@ class AuthWindow(QMainWindow):
             return
 
         try:
-            # Get user object from database handler
             user = self.db.verify_user(username, password)
-
             if user:
-                print(f"Debug - Login successful. User ID: {user.id}")
+                print(f"Debug - Login successful. User ID: {user.id}")  # Add this debug line
                 self.login_successful.emit(user)
                 self.close()
             else:
                 QMessageBox.warning(self, "Login Failed", "Invalid username or password")
         except Exception as e:
-            print(f"Debug - Login error: {str(e)}")  # Debug print
             QMessageBox.critical(self, "Login Error", f"An error occurred during login: {str(e)}")
 
     def handle_signup(self):

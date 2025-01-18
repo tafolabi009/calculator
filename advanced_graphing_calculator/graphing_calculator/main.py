@@ -344,6 +344,9 @@ class MainWindow(QMainWindow):
     def set_user(self, user: User):
         """Set the current user and update UI accordingly"""
         try:
+            if user is None:
+                raise ValueError("Received NoneType user object")
+
             self.current_user = user
             self.calculator.set_user(user)
 
