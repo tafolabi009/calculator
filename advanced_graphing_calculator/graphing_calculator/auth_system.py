@@ -27,17 +27,24 @@ class DatabaseHandler:
         return self.db.add_user(username, password, role, full_name, email)
 
     def verify_user(self, username, password):
-        user_data = self.db.verify_user(username, password)
-        if user_data:
-            return User(
-                username=user_data['username'],
-                password=password,
-                role=user_data['role'],
-                full_name=user_data['full_name'],
-                email=user_data['email'],
-                user_id=user_data['id']  # Pass the user ID
-            )
-        return None
+        try:
+            user_data = self.db.verify_user(username, password)
+            print(f"Debug - Database response: {user_data}")  # Debug print
+
+            if user_data and isinstance(user_data, dict):
+                return User(
+                    username=user_data['username'],
+                    password=password,
+                    role=user_data['role'],
+                    full_name=user_data['full_name'],
+                    email=user_data['email'],
+                    user_id=user_data['id']
+                )
+            return None
+
+        except Exception as e:
+            print(f"Debug - Database verification error: {str(e)}")  # Debug print
+            return None
 
 
 class ModernButton(QPushButton):
@@ -288,14 +295,34 @@ class AuthWindow(QMainWindow):
             return
 
         try:
-            user = self.db.verify_user(username, password)
-            if user:
-                print(f"Debug - Login successful. User ID: {user.id}")  # Add this debug line
+            # Get user data from database
+            user_data = self.db.verify_user(username, password)
+
+            if user_data is not None:
+                # Debug print to check user object
+                print(f"Debug - User data: {vars(user_data)}")
+
+                # Create User object directly if needed
+                if not isinstance(user_data, User):
+                    user = User(
+                        username=user_data['username'],
+                        password=password,
+                        role=user_data['role'],
+                        full_name=user_data['full_name'],
+                        email=user_data['email'],
+                        user_id=user_data['id']
+                    )
+                else:
+                    user = user_data
+
+                # Emit the signal with the user object
                 self.login_successful.emit(user)
                 self.close()
             else:
                 QMessageBox.warning(self, "Login Failed", "Invalid username or password")
+
         except Exception as e:
+            print(f"Debug - Login error details: {str(e)}")
             QMessageBox.critical(self, "Login Error", f"An error occurred during login: {str(e)}")
 
     def handle_signup(self):
