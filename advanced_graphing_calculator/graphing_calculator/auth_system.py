@@ -31,9 +31,10 @@ class DatabaseHandler:
             user_data = self.db.verify_user(username, password)
             print(f"Debug - Database response: {user_data}")  # Debug print
 
-            if user_data and isinstance(user_data, dict):
+            if user_data:  # If we got valid data back
+                # Create and return a User object
                 return User(
-                    username=user_data['username'],
+                    username=username,
                     password=password,
                     role=user_data['role'],
                     full_name=user_data['full_name'],
@@ -297,26 +298,17 @@ class AuthWindow(QMainWindow):
             return
 
         try:
-            # Get user data from database
-            user_data = self.db.verify_user(username, password)
+            # Get user object from database handler
+            user = self.db.verify_user(username, password)
 
-            if user_data:
-                # Create User object from the verified data
-                user = User(
-                    username=user_data['username'],
-                    password=password,
-                    role=user_data['role'],
-                    full_name=user_data['full_name'],
-                    email=user_data['email'],
-                    user_id=user_data['id']
-                )
+            if user:
                 print(f"Debug - Login successful. User ID: {user.id}")
                 self.login_successful.emit(user)
                 self.close()
             else:
                 QMessageBox.warning(self, "Login Failed", "Invalid username or password")
         except Exception as e:
-            print(f"Debug - Login error: {str(e)}")  # Add debug print
+            print(f"Debug - Login error: {str(e)}")  # Debug print
             QMessageBox.critical(self, "Login Error", f"An error occurred during login: {str(e)}")
 
     def handle_signup(self):
