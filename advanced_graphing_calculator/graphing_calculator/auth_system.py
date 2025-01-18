@@ -286,6 +286,8 @@ class AuthWindow(QMainWindow):
         page.setLayout(layout)
         return page
 
+    # In auth_system.py, modify the handle_login method:
+
     def handle_login(self):
         username = self.login_username.text()
         password = self.login_password.text()
@@ -295,14 +297,26 @@ class AuthWindow(QMainWindow):
             return
 
         try:
-            user = self.db.verify_user(username, password)
-            if user:
-                print(f"Debug - Login successful. User ID: {user.id}")  # Add this debug line
+            # Get user data from database
+            user_data = self.db.verify_user(username, password)
+
+            if user_data:
+                # Create User object from the verified data
+                user = User(
+                    username=user_data['username'],
+                    password=password,
+                    role=user_data['role'],
+                    full_name=user_data['full_name'],
+                    email=user_data['email'],
+                    user_id=user_data['id']
+                )
+                print(f"Debug - Login successful. User ID: {user.id}")
                 self.login_successful.emit(user)
                 self.close()
             else:
                 QMessageBox.warning(self, "Login Failed", "Invalid username or password")
         except Exception as e:
+            print(f"Debug - Login error: {str(e)}")  # Add debug print
             QMessageBox.critical(self, "Login Error", f"An error occurred during login: {str(e)}")
 
     def handle_signup(self):
