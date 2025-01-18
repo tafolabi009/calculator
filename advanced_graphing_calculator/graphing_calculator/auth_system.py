@@ -129,6 +129,17 @@ class AuthWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.teacher_btn = QPushButton("Teacher")
+        self.student_btn = QPushButton("Student")
+        self.signup_fullname = ModernLineEdit(placeholder="Full Name")
+        self.signup_email = ModernLineEdit(placeholder="Email")
+        self.login_password = ModernLineEdit(placeholder="Password")
+        self.signup_password = ModernLineEdit(placeholder="Password")
+        self.login_username = ModernLineEdit(placeholder="Username")
+        self.signup_username = ModernLineEdit(placeholder="Username")
+        self.signup_page = self.create_signup_page()
+        self.stacked_widget = None
+        self.login_page = None
         self.db = DatabaseHandler()
         self.init_ui()
 
@@ -143,7 +154,6 @@ class AuthWindow(QMainWindow):
 
         # Create login and signup pages
         self.login_page = self.create_login_page()
-        self.signup_page = self.create_signup_page()
 
         # Add pages to stacked widget
         self.stacked_widget.addWidget(self.login_page)
@@ -162,11 +172,9 @@ class AuthWindow(QMainWindow):
         layout.addWidget(title)
 
         # Username field
-        self.login_username = ModernLineEdit(placeholder="Username")
         layout.addWidget(self.login_username)
 
         # Password field
-        self.login_password = ModernLineEdit(placeholder="Password")
         self.login_password.setEchoMode(QLineEdit.EchoMode.Password)
         layout.addWidget(self.login_password)
 
@@ -209,26 +217,20 @@ class AuthWindow(QMainWindow):
         layout.addWidget(title)
 
         # Username
-        self.signup_username = ModernLineEdit(placeholder="Username")
         layout.addWidget(self.signup_username)
 
         # Password
-        self.signup_password = ModernLineEdit(placeholder="Password")
         self.signup_password.setEchoMode(QLineEdit.EchoMode.Password)
         layout.addWidget(self.signup_password)
 
         # Full Name
-        self.signup_fullname = ModernLineEdit(placeholder="Full Name")
         layout.addWidget(self.signup_fullname)
 
         # Email
-        self.signup_email = ModernLineEdit(placeholder="Email")
         layout.addWidget(self.signup_email)
 
         # Role selection
         role_layout = QHBoxLayout()
-        self.student_btn = QPushButton("Student")
-        self.teacher_btn = QPushButton("Teacher")
 
         for btn in [self.student_btn, self.teacher_btn]:
             btn.setCheckable(True)
@@ -256,7 +258,7 @@ class AuthWindow(QMainWindow):
         signup_btn.clicked.connect(self.handle_signup)
         layout.addWidget(signup_btn)
 
-        # Switch to login
+        # Switch to log in
         switch_to_login = ModernButton("Back to Login")
         switch_to_login.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
         switch_to_login.setStyleSheet("""
@@ -281,13 +283,20 @@ class AuthWindow(QMainWindow):
         username = self.login_username.text()
         password = self.login_password.text()
 
-        user = self.db.verify_user(username, password)
-        if user:
-            print(f"Debug - Login successful. User ID: {user.id}")  # Add this debug line
-            self.login_successful.emit(user)
-            self.close()
-        else:
-            QMessageBox.warning(self, "Login Failed", "Invalid username or password")
+        if not username or not password:
+            QMessageBox.warning(self, "Login Failed", "Please enter both username and password")
+            return
+
+        try:
+            user = self.db.verify_user(username, password)
+            if user:
+                print(f"Debug - Login successful. User ID: {user.id}")  # Add this debug line
+                self.login_successful.emit(user)
+                self.close()
+            else:
+                QMessageBox.warning(self, "Login Failed", "Invalid username or password")
+        except Exception as e:
+            QMessageBox.critical(self, "Login Error", f"An error occurred during login: {str(e)}")
 
     def handle_signup(self):
         username = self.signup_username.text()

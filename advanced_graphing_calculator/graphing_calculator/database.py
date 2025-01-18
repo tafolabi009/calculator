@@ -1,6 +1,7 @@
 # database.py
 import sqlite3
 
+
 class AdvancedDatabase:
     def __init__(self):
         self.db_file = "calculator.db"
@@ -146,7 +147,6 @@ class AdvancedDatabase:
         finally:
             conn.close()
 
-
     def get_user_graphs(self, user_id):
         """Get all graphs for a specific user"""
         conn = sqlite3.connect(self.db_file)
@@ -208,7 +208,6 @@ class AdvancedDatabase:
             }
             for c in comments
         ]
-
 
     def get_user_graph_history(self, user_id):
         """Get all graphs for a user with their comments"""

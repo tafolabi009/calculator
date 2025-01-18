@@ -1,15 +1,12 @@
-import json
 import sys
-from datetime import datetime
 
 import numpy as np
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPalette, QColor
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
                              QDoubleSpinBox,
                              QTextEdit, QMessageBox, QGridLayout,
-                             QListWidget, QInputDialog, QFileDialog)
+                             QListWidget, QInputDialog, )
 from PyQt6.QtWidgets import QFileDialog
 from PyQt6.QtCore import Qt, QSize
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -75,6 +72,7 @@ class ModernLineEdit(QLineEdit):
             }
         """)
 
+
 class CommentInput(QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -85,7 +83,6 @@ class CommentInput(QTextEdit):
             self.parent.add_comment()  # Call parent's add_comment method
         else:
             super().keyPressEvent(event)  # Handle other keys normally
-
 
 
 class GraphCanvas(FigureCanvas):
@@ -271,8 +268,6 @@ class GraphCanvas(FigureCanvas):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
-        # Continue with the rest of your initialization...
-        # (Add the remaining widgets and controls)
     def __init__(self):
         # Create main layout
         self.main_layout = QHBoxLayout()
@@ -292,7 +287,6 @@ class GraphCanvas(FigureCanvas):
 
         self.scale_type = QComboBox()
         self.scale_type.addItems(['Radians', 'Degrees'])
-
 
 
 class MainWindow(QMainWindow):
@@ -347,115 +341,6 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1200, 800)
         self.setPalette(DarkPalette())
 
-    def setup_sidebar_components(self, layout):
-        # Header with user info
-        header_widget = QWidget()
-        header_layout = QVBoxLayout()
-        header_widget.setLayout(header_layout)
-
-        self.user_info = QLabel("Not logged in")
-        self.user_info.setStyleSheet("""
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-            padding: 10px;
-        """)
-        header_layout.addWidget(self.user_info)
-
-        logout_btn = ModernButton("Logout")
-        logout_btn.clicked.connect(self.handle_logout)
-        header_layout.addWidget(logout_btn)
-
-        layout.addWidget(header_widget)
-
-        # Function input section
-        input_group = QWidget()
-        input_layout = QVBoxLayout(input_group)
-        input_layout.setSpacing(10)  # Reduced spacing
-
-        input_label = QLabel("Function Input")
-        input_label.setStyleSheet("color: white; font-size: 14px; font-weight: bold;")
-        input_layout.addWidget(input_label)
-
-        self.expr_input = ModernLineEdit()
-        self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
-        input_layout.addWidget(self.expr_input)
-
-        # Add variable selector
-        var_selector_group = QWidget()
-        var_selector_layout = QHBoxLayout(var_selector_group)
-        var_selector_layout.setContentsMargins(0, 0, 0, 0)
-
-        var_label = QLabel("Variable:")
-        var_label.setStyleSheet("color: white;")
-        var_selector_layout.addWidget(var_label)
-
-        self.var_selector = QComboBox()
-        self.var_selector.addItems(['x', 'y', 't'])
-        self.var_selector.setStyleSheet("""
-                QComboBox {
-                    background-color: #2d2d2d;
-                    color: white;
-                    border: 2px solid #3d3d3d;
-                    border-radius: 4px;
-                    padding: 5px;
-                }
-            """)
-        var_selector_layout.addWidget(self.var_selector)
-        input_layout.addWidget(var_selector_group)
-
-        # Add range controls with more compact layout
-        range_group = QWidget()
-        range_layout = QGridLayout(range_group)
-        range_layout.setContentsMargins(0, 0, 0, 0)
-        range_layout.setSpacing(5)
-
-        # X range
-        self.x_min = QDoubleSpinBox()
-        self.x_min.setRange(-1000, 1000)
-        self.x_min.setValue(-10)
-
-        self.x_max = QDoubleSpinBox()
-        self.x_max.setRange(-1000, 1000)
-        self.x_max.setValue(10)
-
-        # Y range
-        self.y_min = QDoubleSpinBox()
-        self.y_min.setRange(-1000, 1000)
-        self.y_min.setValue(-10)
-
-        self.y_max = QDoubleSpinBox()
-        self.y_max.setRange(-1000, 1000)
-        self.y_max.setValue(10)
-
-        # Add range controls to layout
-        range_layout.addWidget(QLabel("X Range:"), 0, 0)
-        range_layout.addWidget(self.x_min, 0, 1)
-        range_layout.addWidget(QLabel("to"), 0, 2)
-        range_layout.addWidget(self.x_max, 0, 3)
-
-        range_layout.addWidget(QLabel("Y Range:"), 1, 0)
-        range_layout.addWidget(self.y_min, 1, 1)
-        range_layout.addWidget(QLabel("to"), 1, 2)
-        range_layout.addWidget(self.y_max, 1, 3)
-
-        input_layout.addWidget(range_group)
-
-        # Scale type
-        self.scale_type = QComboBox()
-        self.scale_type.addItems(['Radians', 'Degrees'])
-        input_layout.addWidget(self.scale_type)
-
-        layout.addWidget(input_group)
-        layout.addStretch()
-
-        # Add teacher controls
-        self.teacher_controls = self.create_teacher_controls()
-        layout.addWidget(self.teacher_controls)
-        self.teacher_controls.hide()
-
-        layout.addStretch()  # Add stretch to push everything to the top
-
     def set_user(self, user: User):
         """Set the current user and update UI accordingly"""
         try:
@@ -465,17 +350,21 @@ class MainWindow(QMainWindow):
             # Update UI based on user role
             if user.role == "teacher":
                 self.teacher_controls.show()
-                self.student_view.hide()
+                self.student_comments_widget.hide()
                 self.load_student_list()
             else:
                 self.teacher_controls.hide()
-                self.student_view.show()
+                self.student_comments_widget.show()
 
-            # Update user info
+            # Update user info label
             self.user_info.setText(f"Welcome, {user.full_name}\n({user.role.capitalize()})")
 
-            # Load user's graphs
-            self.load_user_graphs()
+            # Clear any existing graphs
+            self.calculator.clear_graphs()
+            self.update_history()
+
+            # Update UI layout
+            self.adjustSize()
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
@@ -488,6 +377,7 @@ class MainWindow(QMainWindow):
         # Add all main content components here...
 
         self.main_layout.addWidget(content)
+
     def __init__(self, calculator: GraphingCalculator):
         super().__init__()
         self.calculator = calculator
@@ -706,8 +596,6 @@ class MainWindow(QMainWindow):
 
         input_layout.addWidget(range_group)
 
-
-        
         # Teacher-specific controls
         self.teacher_controls = QWidget()
         teacher_layout = QVBoxLayout(self.teacher_controls)
@@ -737,14 +625,6 @@ class MainWindow(QMainWindow):
         """)
         self.student_selector.currentIndexChanged.connect(self.load_selected_student_graphs)
         teacher_layout.addWidget(self.student_selector)
-
-        # Add graph preview
-        preview_label = QLabel("Student Graph Preview:")
-        preview_label.setStyleSheet("color: white; font-weight: bold;")
-        layout.addWidget(preview_label)
-
-        self.student_graph_preview = GraphCanvas(self.calculator)
-        layout.addWidget(self.student_graph_preview)
 
         # Add student graph history
         student_history_label = QLabel("Student Graph History")
@@ -792,7 +672,6 @@ class MainWindow(QMainWindow):
                 """)
         teacher_layout.addWidget(self.comment_input)
 
-
         sidebar_layout.addWidget(self.teacher_controls)
         sidebar_layout.addStretch()
         main_layout.addWidget(sidebar)
@@ -810,7 +689,7 @@ class MainWindow(QMainWindow):
         canvas_layout.addWidget(self.canvas)
         content_layout.addWidget(canvas_container)
 
-        # In the MainWindow.__init__ method, replace the buttons section with:
+
         # Action buttons container
         buttons_container = QWidget()
         buttons_layout = QHBoxLayout()
@@ -828,10 +707,12 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(plot_btn)
 
         load_graphs_btn = ModernButton("Load Graphs")  # Moved here
-        load_graphs_btn.clicked.connect(self.load_user_graphs)
+        load_graphs_btn.clicked.connect(self.load_graphs())  # Add parentheses
         left_layout.addWidget(load_graphs_btn)
 
-        buttons_layout.addWidget(left_buttons)
+        clear_btn = ModernButton("Clear")
+        clear_btn.clicked.connect(self.clear_graph)
+        left_layout.addWidget(clear_btn)
 
         # Right side buttons
         right_buttons = QWidget()
@@ -850,9 +731,6 @@ class MainWindow(QMainWindow):
         buttons_layout.addWidget(right_buttons)
         content_layout.addWidget(buttons_container)
 
-        # Remove the Load Graphs button from sidebar
-        # Delete or comment out the load_graphs_btn in the sidebar section
-
         # Comments section for students
         self.student_comments_widget = QWidget()
         comments_layout = QVBoxLayout(self.student_comments_widget)
@@ -860,6 +738,7 @@ class MainWindow(QMainWindow):
         comments_label = QLabel("Teacher Comments")
         comments_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         comments_layout.addWidget(comments_label)
+
 
         self.comments_list = QListWidget()
         self.comments_list.setMinimumHeight(150)
@@ -876,7 +755,7 @@ class MainWindow(QMainWindow):
             }
         """)
         comments_layout.addWidget(self.comments_list)
-        content_layout.addWidget(self.student_comments_widget)
+        content_layout.addWidget(self.comments_list)
 
         main_layout.addWidget(content)
 
@@ -888,93 +767,6 @@ class MainWindow(QMainWindow):
         # Apply dark theme
         self.setPalette(DarkPalette())
 
-    def load_student_graph(self, item):
-        """Load and display the selected student's graph"""
-        if not item:
-            return
-
-        try:
-            graph_name = item.text()
-            graph_data = self.student_graph_data[graph_name]
-
-            # Update preview
-            self.student_graph_preview.axes.clear()
-            self.student_graph_preview.axes.grid(True, color='#666666')
-
-            x_values = np.linspace(graph_data['x_min'], graph_data['x_max'], 1000)
-            y_values = [
-                self.calculator.evaluate_expression(
-                    graph_data['expression'],
-                    x,
-                    graph_data['scale_type']
-                )
-                for x in x_values
-            ]
-
-            self.student_graph_preview.axes.plot(x_values, y_values)
-            self.student_graph_preview.axes.set_xlim(graph_data['x_min'], graph_data['x_max'])
-            self.student_graph_preview.axes.set_ylim(graph_data['y_min'], graph_data['y_max'])
-            self.student_graph_preview.draw()
-
-            # Update comments
-            self.update_comments(graph_name)
-
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error loading student graph: {str(e)}")
-
-    def load_user_graphs(self):
-        """Load graphs for the current user"""
-        if not self.current_user:
-            QMessageBox.warning(self, "Error", "Please log in first")
-            return
-
-        try:
-            db = AdvancedDatabase()
-            graphs = db.get_user_graph_history(self.current_user.id)
-
-            if not graphs:
-                QMessageBox.information(self, "Info", "No saved graphs found")
-                return
-
-            # Update history list
-            self.history_list.clear()
-            self.graph_data = {}
-
-            for graph in graphs:
-                self.history_list.addItem(graph['name'])
-                self.graph_data[graph['name']] = graph
-
-            # Load first graph if available
-            if self.history_list.count() > 0:
-                self.load_graph_from_history(self.history_list.item(0))
-                QMessageBox.information(self, "Success", "Graphs loaded successfully!")
-
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
-
-    def setup_student_view(self):
-        """Setup the student view components"""
-        self.student_view = QWidget()
-        layout = QVBoxLayout(self.student_view)
-
-        # Comments section
-        comments_label = QLabel("Teacher Comments")
-        comments_label.setStyleSheet("color: white; font-weight: bold;")
-        layout.addWidget(comments_label)
-
-        self.comments_list = QListWidget()
-        self.comments_list.setStyleSheet("""
-            QListWidget {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-            }
-        """)
-        layout.addWidget(self.comments_list)
-
-        return self.student_view
-
     def save_graph_image(self):
         """Save the current graph as a PNG image"""
         try:
@@ -985,9 +777,9 @@ class MainWindow(QMainWindow):
                 if not file_name.endswith('.png'):
                     file_name += '.png'
                 self.canvas.figure.savefig(file_name,
-                                         facecolor=self.canvas.figure.get_facecolor(),
-                                         edgecolor='none',
-                                         bbox_inches='tight')
+                                           facecolor=self.canvas.figure.get_facecolor(),
+                                           edgecolor='none',
+                                           bbox_inches='tight')
                 QMessageBox.information(self, "Success", "Graph image saved successfully!")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error saving graph image: {str(e)}")
@@ -1060,8 +852,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error updating history: {str(e)}")
 
-
-
     def update_comments(self, graph_name):
         """Update the comments list for the selected graph"""
         self.comments_list.clear()
@@ -1074,32 +864,21 @@ class MainWindow(QMainWindow):
                     item_text = str(comment)
                 self.comments_list.addItem(item_text)
 
-    def load_user_graphs(self):
-        """Load graphs for the current user"""
-        if not self.current_user:
-            QMessageBox.warning(self, "Error", "Please log in first")
+    def load_graphs(self, filename=None):
+        """Load graphs from a file"""
+        if not filename and not self.current_user:
             return
 
-        try:
-            file_name, _ = QFileDialog.getOpenFileName(
-                self,
-                "Load Graph Data",
-                "",
-                "JSON Files (*.json);;All Files (*)"
-            )
-            if file_name:
-                self.calculator.load_graphs(file_name)
-                self.update_history()
+        if not filename:
+            filename = f"graphs_{self.current_user.username}.json"
 
-                # Load the first graph if available
-                if self.history_list.count() > 0:
-                    first_item = self.history_list.item(0)
-                    self.load_graph_from_history(first_item)
-
-                QMessageBox.information(self, "Success", "Graphs loaded successfully!")
-
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
+        if os.path.exists(filename):
+            with open(filename, 'r') as f:
+                data = json.load(f)
+                self.graphs = {
+                    name: Graph.from_dict(graph_data)
+                    for name, graph_data in data.items()
+                }
 
     def save_graph(self):
         """Save the current graph to the database"""
@@ -1224,6 +1003,7 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error adding comment: {str(e)}")
+
     def load_graph_from_history(self, item):
         """Load and display a graph from history when selected"""
         if not item:
@@ -1302,8 +1082,6 @@ class MainWindow(QMainWindow):
                     self.history_list.clear()
                     for graph_name in self.calculator.graphs:
                         self.history_list.addItem(graph_name)
-
-
 
         def main():
             # Create QApplication instance
