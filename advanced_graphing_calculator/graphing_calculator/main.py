@@ -441,42 +441,41 @@ class MainWindow(QMainWindow):
         content_layout.setContentsMargins(20, 20, 20, 20)
         content_layout.setSpacing(20)
 
+
         # Graph canvas
         canvas_container = QWidget()
         canvas_layout = QVBoxLayout(canvas_container)
-        self.canvas = GraphCanvas()
+        self.canvas = GraphCanvas(self.calculator)  # Pass the calculator instance
         canvas_layout.addWidget(self.canvas)
         content_layout.addWidget(canvas_container)
 
-
         # Action buttons container
         buttons_container = QWidget()
-        buttons_layout = QHBoxLayout()
-        buttons_container.setLayout(buttons_layout)
+        buttons_layout = QHBoxLayout(buttons_container)  # Ensure this is a proper layout
         buttons_layout.setSpacing(10)
 
         # Left side buttons
         left_buttons = QWidget()
-        left_layout = QHBoxLayout()
-        left_buttons.setLayout(left_layout)
+        left_layout = QHBoxLayout(left_buttons)
         left_layout.setSpacing(10)
 
         plot_btn = ModernButton("Plot Graph")
         plot_btn.clicked.connect(self.plot_graph)
         left_layout.addWidget(plot_btn)
 
-        load_graphs_btn = ModernButton("Load Graphs")  # Moved here
-        load_graphs_btn.clicked.connect(self.load_graphs)  # Remove parentheses
+        load_graphs_btn = ModernButton("Load Graphs")
+        load_graphs_btn.clicked.connect(self.load_graphs)
         left_layout.addWidget(load_graphs_btn)
 
         clear_btn = ModernButton("Clear")
         clear_btn.clicked.connect(self.clear_graph)
         left_layout.addWidget(clear_btn)
 
+        buttons_layout.addWidget(left_buttons)  # Add left buttons to the main layout
+
         # Right side buttons
         right_buttons = QWidget()
-        right_layout = QHBoxLayout()
-        right_buttons.setLayout(right_layout)
+        right_layout = QHBoxLayout(right_buttons)
         right_layout.setSpacing(10)
 
         save_graph_btn = ModernButton("Save Graph")
@@ -487,7 +486,7 @@ class MainWindow(QMainWindow):
         save_image_btn.clicked.connect(self.save_graph_image)
         right_layout.addWidget(save_image_btn)
 
-        buttons_layout.addWidget(right_buttons)
+        buttons_layout.addWidget(right_buttons)  # Add right buttons to the main layout
         content_layout.addWidget(buttons_container)
 
         # Comments section for students
@@ -653,6 +652,15 @@ class MainWindow(QMainWindow):
             item_text = f"{comment['teacher']} ({comment['timestamp']}): {comment['text']}"
             self.comments_list.addItem(item_text)
 
+    def clear_graph(self):
+        """Clear the current graph from the canvas."""
+        try:
+            self.canvas.axes.clear()  # Clear the axes on the canvas
+            self.canvas.axes.grid(True, color='#666666')  # Add the grid back
+            self.canvas.draw()  # Refresh the canvas
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error clearing graph: {str(e)}")
+
     def load_graphs(self):
         """Load graphs from the database based on the current user"""
         if not self.current_user:
@@ -660,7 +668,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            db = database.AdvancedDatabase()
+            db = AdvancedDatabase()
             if self.current_user.role == 'teacher':
                 graphs = db.get_all_graphs()  # Assuming you have a method to get all graphs
             else:
@@ -733,7 +741,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            db = database.AdvancedDatabase()
+            db = AdvancedDatabase()
             graphs = db.get_user_graph_history(self.current_user.id)
 
             # Clear current history
@@ -756,7 +764,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            db = database.AdvancedDatabase()
+            db = AdvancedDatabase()
             graphs = db.get_student_graphs(selected_student)
 
             self.student_graph_list.clear()
@@ -787,7 +795,7 @@ class MainWindow(QMainWindow):
             graph_name = selected_items[0].text()
             graph_data = self.student_graph_data[graph_name]
 
-            db = database.AdvancedDatabase()
+            db = AdvancedDatabase()
             db.add_comment(graph_data['id'], self.current_user.id, comment_text)
 
             self.comment_input.clear()
