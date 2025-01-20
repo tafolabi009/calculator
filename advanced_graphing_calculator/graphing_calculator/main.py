@@ -1,4 +1,3 @@
-import sys
 
 import numpy as np
 from PyQt6.QtGui import QPalette, QColor
@@ -12,9 +11,10 @@ from PyQt6.QtCore import Qt, QSize
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+from graphing_calculator import GraphingCalculator, Graph
 from auth_system import User
 from database import AdvancedDatabase
-from graphing_calculator import GraphingCalculator, Graph
+
 
 
 class DarkPalette(QPalette):
@@ -109,166 +109,8 @@ class GraphCanvas(FigureCanvas):
         sidebar_layout.setContentsMargins(20, 20, 20, 20)
         sidebar_layout.setSpacing(20)
 
-        # Create input group
-        input_group = QWidget()
-        input_layout = QVBoxLayout(input_group)
-        input_layout.setSpacing(15)
 
-        # Add function input label
-        input_label = QLabel("Function Input")
-        input_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        input_layout.addWidget(input_label)
 
-        # Add expression inputs
-        self.expr_input = ModernLineEdit()
-        self.expr_input.setMinimumHeight(45)
-        self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
-        input_layout.addWidget(self.expr_input)
-
-        self.second_expr_input = ModernLineEdit()
-        self.second_expr_input.setMinimumHeight(45)
-        self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
-        input_layout.addWidget(self.second_expr_input)
-
-        # Add range and variable controls after the expression inputs
-        range_group = QWidget()
-        range_layout = QGridLayout(range_group)
-        range_layout.setSpacing(10)
-
-        # Variable selector
-        var_label = QLabel("Variable:")
-        var_label.setStyleSheet("color: white; font-weight: bold;")
-        self.var_selector = QComboBox()
-        self.var_selector.addItems(['x', 'y', 't'])
-        self.var_selector.setStyleSheet("""
-            QComboBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(var_label, 0, 0)
-        range_layout.addWidget(self.var_selector, 0, 1, 1, 3)
-
-        # X range
-        x_range_label = QLabel("X Range:")
-        x_range_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(x_range_label, 1, 0)
-
-        self.x_min = QDoubleSpinBox()
-        self.x_min.setRange(-1000, 1000)
-        self.x_min.setValue(-10)
-        self.x_min.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.x_min, 1, 1)
-
-        x_to_label = QLabel("to")
-        x_to_label.setStyleSheet("color: white;")
-        range_layout.addWidget(x_to_label, 1, 2)
-
-        self.x_max = QDoubleSpinBox()
-        self.x_max.setRange(-1000, 1000)
-        self.x_max.setValue(10)
-        self.x_max.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.x_max, 1, 3)
-
-        # Y range
-        y_range_label = QLabel("Y Range:")
-        y_range_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(y_range_label, 2, 0)
-
-        self.y_min = QDoubleSpinBox()
-        self.y_min.setRange(-1000, 1000)
-        self.y_min.setValue(-10)
-        self.y_min.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.y_min, 2, 1)
-
-        y_to_label = QLabel("to")
-        y_to_label.setStyleSheet("color: white;")
-        range_layout.addWidget(y_to_label, 2, 2)
-
-        self.y_max = QDoubleSpinBox()
-        self.y_max.setRange(-1000, 1000)
-        self.y_max.setValue(10)
-        self.y_max.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.y_max, 2, 3)
-
-        # Scale type
-        scale_label = QLabel("Scale:")
-        scale_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(scale_label, 3, 0)
-
-        self.scale_type = QComboBox()
-        self.scale_type.addItems(['Radians', 'Degrees'])
-        self.scale_type.setStyleSheet("""
-            QComboBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.scale_type, 3, 1, 1, 3)
-
-        input_layout.addWidget(range_group)
-
-        # Add Load Graphs button
-        load_graphs_btn = ModernButton("Load Graphs")
-        load_graphs_btn.clicked.connect(self.load_user_graphs)
-        input_layout.addWidget(load_graphs_btn)
-        # Add input group to sidebar
-        sidebar_layout.addWidget(input_group)
-
-        # Create canvas container
-        canvas_container = QWidget()
-        canvas_layout = QVBoxLayout(canvas_container)
-        self.canvas = GraphCanvas()
-        canvas_layout.addWidget(self.canvas)
-
-        # Add widgets to main layout
-        main_layout.addWidget(sidebar)
-        main_layout.addWidget(canvas_container)
-
-        # Set central widget
-        central_widget = QWidget()
-        central_widget.setLayout(main_layout)
-        self.setCentralWidget(central_widget)
-
-    def __init__(self):
         # Create main layout
         self.main_layout = QHBoxLayout()
         fig = Figure(figsize=(8, 6), dpi=100)
@@ -294,98 +136,12 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.calculator = calculator
         self.current_user = None
-
-        # Create central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-
-        # Create main layout
-        layout = QHBoxLayout()
-        central_widget.setLayout(layout)
-
-        # Create sidebar
-        sidebar = QWidget()
-        sidebar.setMinimumWidth(350)
-        sidebar.setMaximumWidth(400)
-        sidebar.setStyleSheet("""
-            QWidget {
-                background-color: #1e1e2e;
-                border-right: 1px solid #333340;
-            }
-        """)
-
-        # Create sidebar layout
-        sidebar_layout = QVBoxLayout()
-        sidebar.setLayout(sidebar_layout)
-
-        # Add components to sidebar
-        self.setup_sidebar_components(sidebar_layout)
-
-        # Create content area
-        content = QWidget()
-        content_layout = QVBoxLayout()
-        content.setLayout(content_layout)
-
-        # Add components to content area
-        self.setup_content_components(content_layout)
-
-        # Add widgets to main layout
-        layout.addWidget(sidebar)
-        layout.addWidget(content)
-
-        # Initialize other instance variables
         self.history_list = QListWidget()
+        self.graph_data = {}
+        self.student_graph_data = {}
+        self.teacher_controls = None
+        self.student_comments_widget = None
 
-        # Set window properties
-        self.setWindowTitle("Graphing Calculator")
-        self.setMinimumSize(1200, 800)
-        self.setPalette(DarkPalette())
-
-    def set_user(self, user: User):
-        """Set the current user and update UI accordingly"""
-        try:
-            if user is None:
-                raise ValueError("Received NoneType user object")
-
-            self.current_user = user
-            self.calculator.set_user(user)
-
-            # Update UI based on user role
-            if user.role == "teacher":
-                self.teacher_controls.show()
-                self.student_comments_widget.hide()
-                self.load_student_list()
-            else:
-                self.teacher_controls.hide()
-                self.student_comments_widget.show()
-
-            # Update user info label
-            self.user_info.setText(f"Welcome, {user.full_name}\n({user.role.capitalize()})")
-
-            # Clear any existing graphs
-            self.calculator.clear_graphs()
-            self.update_history()
-
-            # Update UI layout
-            self.adjustSize()
-
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
-
-    def setup_main_content(self):
-        """Set up the main content area"""
-        content = QWidget()
-        content_layout = QVBoxLayout(content)
-
-        # Add all main content components here...
-
-        self.main_layout.addWidget(content)
-
-    def __init__(self, calculator: GraphingCalculator):
-        super().__init__()
-        self.calculator = calculator
-        self.current_user = None
-        self.history_list = QListWidget()  # Initialize history_list
 
         # Main layout
         main_layout = QHBoxLayout()
@@ -710,7 +466,7 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(plot_btn)
 
         load_graphs_btn = ModernButton("Load Graphs")  # Moved here
-        load_graphs_btn.clicked.connect(self.load_graphs())  # Add parentheses
+        load_graphs_btn.clicked.connect(self.load_graphs)  # Remove parentheses
         left_layout.addWidget(load_graphs_btn)
 
         clear_btn = ModernButton("Clear")
@@ -769,6 +525,36 @@ class MainWindow(QMainWindow):
 
         # Apply dark theme
         self.setPalette(DarkPalette())
+    def set_user(self, user: User):
+        """Set the current user and update UI accordingly"""
+        try:
+            if user is None:
+                raise ValueError("Received NoneType user object")
+
+            self.current_user = user
+            self.calculator.set_user(user)
+
+            # Update UI based on user role
+            if user.role == "teacher":
+                self.teacher_controls.show()
+                self.student_comments_widget.hide()
+                self.load_student_list()
+            else:
+                self.teacher_controls.hide()
+                self.student_comments_widget.show()
+
+            # Update user info label
+            self.user_info.setText(f"Welcome, {user.full_name}\n({user.role.capitalize()})")
+
+            # Clear any existing graphs
+            self.calculator.clear_graphs()
+            self.update_history()
+
+            # Update UI layout
+            self.adjustSize()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
 
     def save_graph_image(self):
         """Save the current graph as a PNG image"""
@@ -856,13 +642,16 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error updating history: {str(e)}")
 
     def update_comments(self, graph_name):
-        """Update the comments list for the selected graph"""
+        """Update the comments list for the selected graph."""
+        if graph_name not in self.graph_data:
+            QMessageBox.warning(self, "Error", "Graph not found in data")
+            return
+
         self.comments_list.clear()
-        if graph_name in self.graph_data:
-            comments = self.graph_data[graph_name]['comments']
-            for comment in comments:
-                item_text = f"{comment['teacher']} ({comment['timestamp']}): {comment['text']}"
-                self.comments_list.addItem(item_text)
+        comments = self.graph_data[graph_name].get('comments', [])
+        for comment in comments:
+            item_text = f"{comment['teacher']} ({comment['timestamp']}): {comment['text']}"
+            self.comments_list.addItem(item_text)
 
     def load_graphs(self):
         """Load graphs from the database based on the current user"""
@@ -871,7 +660,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            db = AdvancedDatabase()
+            db = database.AdvancedDatabase()
             if self.current_user.role == 'teacher':
                 graphs = db.get_all_graphs()  # Assuming you have a method to get all graphs
             else:
@@ -944,7 +733,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            db = AdvancedDatabase()
+            db = database.AdvancedDatabase()
             graphs = db.get_user_graph_history(self.current_user.id)
 
             # Clear current history
@@ -967,7 +756,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            db = AdvancedDatabase()
+            db = database.AdvancedDatabase()
             graphs = db.get_student_graphs(selected_student)
 
             self.student_graph_list.clear()
@@ -998,7 +787,7 @@ class MainWindow(QMainWindow):
             graph_name = selected_items[0].text()
             graph_data = self.student_graph_data[graph_name]
 
-            db = AdvancedDatabase()
+            db = database.AdvancedDatabase()
             db.add_comment(graph_data['id'], self.current_user.id, comment_text)
 
             self.comment_input.clear()
@@ -1052,12 +841,9 @@ class MainWindow(QMainWindow):
 
             # Generate x values
             x_values = np.linspace(x_min, x_max, 1000)
-
-            # Generate y values using evaluate_expression
-            y_values = [
-                self.calculator.evaluate_expression(expression, x, scale_type)
-                for x in x_values
-            ]
+            y_values = np.vectorize(
+                lambda x: self.calculator.evaluate_expression(expression, x, scale_type)
+            )(x_values)
 
             # Plot the graph
             self.canvas.axes.plot(x_values, y_values, label='Graph')
@@ -1079,13 +865,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Unexpected error: {str(e)}")
 
-            def update_history(self):
-                """Update the graph history list."""
-                if hasattr(self, 'history_list'):
-                    self.history_list.clear()
-                    for graph_name in self.calculator.graphs:
-                        self.history_list.addItem(graph_name)
-
         def main():
             # Create QApplication instance
             app = QApplication(sys.argv)
@@ -1094,7 +873,7 @@ class MainWindow(QMainWindow):
             app.setStyle('Fusion')
 
             # Create calculator backend
-            calculator = GraphingCalculator()
+            calculator = graphing_calculator.GraphingCalculator()
 
             # Create main window
             window = MainWindow(calculator)
@@ -1105,5 +884,5 @@ class MainWindow(QMainWindow):
             # Start event loop
             sys.exit(app.exec())
 
-        if __name__ == "__main__":
-            main()
+if __name__ == "__main__":
+    main()

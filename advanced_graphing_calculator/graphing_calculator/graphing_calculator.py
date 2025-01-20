@@ -82,7 +82,7 @@ class GraphingCalculator:
         graph = Graph(expression, 'x', start, end, scale_type)
         self.save_graph(name, graph)
 
-    def evaluate_expression(self, expression, x, scale_type=None):
+    def evaluate_expression(self, expression, x, scale_type):
         try:
             # Define a local context with math functions
             local_context = {
