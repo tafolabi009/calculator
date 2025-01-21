@@ -663,36 +663,161 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error clearing graph: {str(e)}")
 
     def load_graphs(self):
-        """Load graphs based on the user's role."""
-        if not self.current_user:
-            QMessageBox.warning(self, "Error", "Please log in to load graphs")
+        """
+        Load graphs based on user role with role-based access control.
+        Teachers can view all graphs while students can only view their own.
+        """
+        if not hasattr(self, 'current_user') or not self.current_user:
+            QMessageBox.warning(
+                self,
+                "Authentication Error",
+                "Please log in to access your graphs"
+            )
+            return
+
+        self.setCursor(Qt.WaitCursor)  # Show loading cursor
+        try:
+            # Use context manager for proper database connection handling
+            with AdvancedDatabase() as db:
+                # Get graphs based on user role
+                if self.current_user.role == "teacher":
+                    graphs = db.get_all_graphs()
+                    if not graphs:
+                        QMessageBox.information(
+                            self,
+                            "No Data",
+                            "No graphs found in the database"
+                        )
+                        return
+                else:  # Student role
+                    graphs = db.get_user_graphs(self.current_user.id)
+                    if not graphs:
+                        QMessageBox.information(
+                            self,
+                            "No Data",
+                            f"No graphs found for user {self.current_user.username}"
+                        )
+                        return
+
+                # Update UI
+                self.update_graph_display(graphs)
+
+        except DatabaseConnectionError as e:
+            QMessageBox.critical(
+                self,
+                "Connection Error",
+                f"Unable to connect to database: {str(e)}\nPlease check your connection and try again."
+            )
+            logging.error(f"Database connection error: {str(e)}")
+
+        except DatabaseQueryError as e:
+            QMessageBox.critical(
+                self,
+                "Query Error",
+                f"Error retrieving graphs: {str(e)}\nPlease contact support if this persists."
+            )
+            logging.error(f"Database query error: {str(e)}")
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Unexpected Error",
+                f"An unexpected error occurred: {str(e)}\nPlease try again or contact support."
+            )
+            logging.error(f"Unexpected error in load_graphs: {str(e)}")
+            raise
+
+        finally:
+            self.setCursor(Qt.ArrowCursor)  # Restore normal cursor
+
+    def update_graph_display(self, graphs):
+        """
+        Update the UI with the loaded graphs.
+
+        Args:
+            graphs (list): List of graph dictionaries containing graph data
+        """
+        try:
+            # Clear existing display
+            self.history_list.clear()
+            self.graph_data = {}
+
+            # Sort graphs by creation date (newest first)
+            sorted_graphs = sorted(
+                graphs,
+                key=lambda x: x.get('created_at', ''),
+                reverse=True
+            )
+
+            # Update UI with sorted graphs
+            for graph in sorted_graphs:
+                # Add additional validation
+                if not isinstance(graph, dict) or 'name' not in graph:
+                    logging.warning(f"Invalid graph data format: {graph}")
+                    continue
+
+                # Create display text with additional info
+                display_text = (f"{graph['name']} "
+                                f"({graph.get('created_at', 'No date')})")
+
+                # Add to list widget
+                item = QListWidgetItem(display_text)
+                if graph.get('is_shared', False):
+                    item.setIcon(QIcon('shared_icon.png'))
+                self.history_list.addItem(item)
+
+                # Store reference with unique identifier
+                self.graph_data[graph['name']] = graph
+
+            # Select the most recent graph
+            if self.history_list.count() > 0:
+                self.history_list.setCurrentRow(0)
+
+            # Update status bar
+            self.statusBar().showMessage(
+                f"Loaded {len(graphs)} graphs successfully",
+                3000
+            )
+
+        except Exception as e:
+            logging.error(f"Error updating graph display: {str(e)}")
+            raise
+
+    def load_selected_student_graphs(self):
+        """Load graphs for selected student"""
+        # First check if student_selector exists and has a selection
+        if not hasattr(self, 'student_selector'):
+            QMessageBox.warning(self, "Error", "Student selector not initialized")
+            return
+
+        selected_student = self.student_selector.currentText()
+        if not selected_student:
+            QMessageBox.warning(self, "Error", "No student selected")
             return
 
         try:
-            db = AdvancedDatabase()  # Initialize database connection
+            with AdvancedDatabase() as db:  # Using context manager for database
+                graphs = db.get_student_graphs(selected_student)
 
-            # Teachers can load all graphs
-            if self.current_user.role == "teacher":
-                graphs = db.get_all_graphs()
-            else:
-                # Students can load only their own graphs
-                graphs = db.get_user_graphs(self.current_user.id)
+                # Check if student_graph_list exists
+                if not hasattr(self, 'student_graph_list'):
+                    self.student_graph_list = QListWidget()  # Create if it doesn't exist
 
-            if not graphs:
-                QMessageBox.information(self, "Info", "No graphs found")
-                return
+                self.student_graph_list.clear()
 
-            # Populate the history list with graph names
-            self.history_list.clear()
-            for graph in graphs:
-                self.history_list.addItem(graph['name'])
+                # Initialize student_graph_data if it doesn't exist
+                if not hasattr(self, 'student_graph_data'):
+                    self.student_graph_data = {}
 
-            # Store graphs for reference
-            self.graph_data = {graph['name']: graph for graph in graphs}
+                for graph in graphs:
+                    self.student_graph_list.addItem(graph['name'])
+                    self.student_graph_data[graph['name']] = graph
+
+                if not graphs:
+                    QMessageBox.information(self, "Info", f"No graphs found for {selected_student}")
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
-
+            QMessageBox.critical(self, "Error", f"Error loading student graphs: {str(e)}")
     def save_graph(self):
         """Save the current graph to the database"""
         if not self.current_user:
@@ -745,46 +870,6 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error saving graph: {str(e)}")
             print(f"Debug - General Error: {str(e)}")
 
-    def load_user_graphs(self):
-        """Load graphs for the current user from database"""
-        if not self.current_user:
-            return
-
-        try:
-            db = AdvancedDatabase()
-            graphs = db.get_user_graph_history(self.current_user.id)
-
-            # Clear current history
-            self.history_list.clear()
-
-            # Add graphs to history list
-            for graph in graphs:
-                self.history_list.addItem(graph['name'])
-
-            # Store the graph data for reference
-            self.graph_data = {graph['name']: graph for graph in graphs}
-
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
-
-    def load_selected_student_graphs(self):
-        """Load graphs for selected student"""
-        selected_student = self.student_selector.currentText()
-        if not selected_student:
-            return
-
-        try:
-            db = AdvancedDatabase()
-            graphs = db.get_student_graphs(selected_student)
-
-            self.student_graph_list.clear()
-            for graph in graphs:
-                self.student_graph_list.addItem(graph['name'])
-
-            # Store the graph data for reference
-            self.student_graph_data = {graph['name']: graph for graph in graphs}
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error loading student graphs: {str(e)}")
 
     def add_comment(self):
         """Add a teacher comment to the selected graph"""
