@@ -1,12 +1,12 @@
 
 import numpy as np
 from PyQt6.QtGui import QPalette, QColor
+import numpy as np
+from PyQt6.QtGui import QPalette, QColor
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
-                             QDoubleSpinBox,
-                             QTextEdit, QMessageBox, QGridLayout,
-                             QListWidget, QInputDialog,)
-from PyQt6.QtWidgets import QFileDialog
+                             QDoubleSpinBox, QTextEdit, QMessageBox, QGridLayout,
+                             QListWidget, QInputDialog, QFileDialog)
 from PyQt6.QtCore import Qt, QSize
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -662,8 +662,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error clearing graph: {str(e)}")
 
-    from PyQt6.QtCore import Qt, QSize, QtCore
-
     def load_graphs(self):
         """
         Load graphs based on user role with role-based access control.
@@ -677,7 +675,7 @@ class MainWindow(QMainWindow):
             )
             return
 
-        self.setCursor(QtCore.Qt.CursorShape.WaitCursor)  # Show loading cursor
+        self.setCursor(Qt.CursorShape.WaitCursor)  # Show loading cursor
         try:
             # Use context manager for proper database connection handling
             with AdvancedDatabase() as db:
@@ -730,7 +728,7 @@ class MainWindow(QMainWindow):
             raise
 
         finally:
-            self.setCursor(QtCore.Qt.CursorShape.ArrowCursor)  # Restore normal cursor
+            self.setCursor(Qt.CursorShape.ArrowCursor)  # Restore normal cursor
 
     def update_graph_display(self, graphs):
         """
