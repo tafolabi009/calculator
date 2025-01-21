@@ -662,6 +662,8 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error clearing graph: {str(e)}")
 
+    from PyQt6.QtCore import Qt, QSize, QtCore
+
     def load_graphs(self):
         """
         Load graphs based on user role with role-based access control.
@@ -675,7 +677,7 @@ class MainWindow(QMainWindow):
             )
             return
 
-        self.setCursor(Qt.WaitCursor)  # Show loading cursor
+        self.setCursor(QtCore.Qt.CursorShape.WaitCursor)  # Show loading cursor
         try:
             # Use context manager for proper database connection handling
             with AdvancedDatabase() as db:
@@ -728,7 +730,7 @@ class MainWindow(QMainWindow):
             raise
 
         finally:
-            self.setCursor(Qt.ArrowCursor)  # Restore normal cursor
+            self.setCursor(QtCore.Qt.CursorShape.ArrowCursor)  # Restore normal cursor
 
     def update_graph_display(self, graphs):
         """
