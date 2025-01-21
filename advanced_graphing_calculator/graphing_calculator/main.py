@@ -640,17 +640,18 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error updating history: {str(e)}")
 
-    def update_comments(self, graph_name):
+    def update_comments(self, graph_id):
         """Update the comments list for the selected graph."""
-        if graph_name not in self.graph_data:
-            QMessageBox.warning(self, "Error", "Graph not found in data")
-            return
+        try:
+            db = AdvancedDatabase()
+            comments = db.get_graph_comments(graph_id)
 
-        self.comments_list.clear()
-        comments = self.graph_data[graph_name].get('comments', [])
-        for comment in comments:
-            item_text = f"{comment['teacher']} ({comment['timestamp']}): {comment['text']}"
-            self.comments_list.addItem(item_text)
+            self.comments_list.clear()
+            for comment in comments:
+                item_text = f"{comment['teacher_name']} ({comment['timestamp']}): {comment['comment']}"
+                self.comments_list.addItem(item_text)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading comments: {str(e)}")
 
     def clear_graph(self):
         """Clear the current graph from the canvas."""
@@ -662,24 +663,33 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error clearing graph: {str(e)}")
 
     def load_graphs(self):
-        """Load graphs from the database based on the current user"""
+        """Load graphs based on the user's role."""
         if not self.current_user:
             QMessageBox.warning(self, "Error", "Please log in to load graphs")
             return
 
         try:
-            db = AdvancedDatabase()
-            if self.current_user.role == 'teacher':
-                graphs = db.get_all_graphs()  # Assuming you have a method to get all graphs
-            else:
-                graphs = db.get_user_graphs(self.current_user.id)
+            db = AdvancedDatabase()  # Initialize database connection
 
+            # Teachers can load all graphs
+            if self.current_user.role == "teacher":
+                graphs = db.get_all_graphs()
+            else:
+                # Students can load only their own graphs
+                graphs = db.get_user_graphs(self.current_user['id'])
+
+            if not graphs:
+                QMessageBox.information(self, "Info", "No graphs found")
+                return
+
+            # Populate the history list with graph names
             self.history_list.clear()
             for graph in graphs:
                 self.history_list.addItem(graph['name'])
 
-            # Store the graph data for reference
+            # Store graphs for reference
             self.graph_data = {graph['name']: graph for graph in graphs}
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
 
@@ -805,29 +815,35 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error adding comment: {str(e)}")
 
     def load_graph_from_history(self, item):
-        """Load and display a graph from history when selected"""
+        """Load and display a graph based on selection."""
         if not item:
             return
 
         graph_name = item.text()
-        if graph_name in self.calculator.graphs:
-            try:
-                graph = self.calculator.graphs[graph_name]
+        graph = self.graph_data.get(graph_name)
 
-                # Update UI controls with graph data
-                self.expr_input.setText(graph.expression)
-                self.x_min.setValue(graph.start)
-                self.x_max.setValue(graph.end)
-                self.scale_type.setCurrentText(graph.scale_type.capitalize())
+        if not graph:
+            QMessageBox.warning(self, "Error", "Graph not found in the data")
+            return
 
-                # Plot the graph
-                self.plot_graph()
+        try:
+            # Update the input fields with graph details
+            self.expr_input.setText(graph['expression'])
+            self.x_min.setValue(graph['x_min'])
+            self.x_max.setValue(graph['x_max'])
+            self.y_min.setValue(graph['y_min'])
+            self.y_max.setValue(graph['y_max'])
+            self.scale_type.setCurrentText(graph['scale_type'].capitalize())
 
-                # Update comments
-                self.update_comments(graph_name)
+            # Plot the graph
+            self.plot_graph()
 
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Error loading graph: {str(e)}")
+            # If the user is a teacher, update the comments section
+            if self.current_user.role == "teacher":
+                self.update_comments(graph['id'])
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading graph: {str(e)}")
 
     def plot_graph(self):
         try:
