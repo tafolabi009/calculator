@@ -677,46 +677,31 @@ class MainWindow(QMainWindow):
 
         self.setCursor(Qt.CursorShape.WaitCursor)  # Show loading cursor
         try:
-            # Use context manager for proper database connection handling
-            with AdvancedDatabase() as db:
-                # Get graphs based on user role
-                if self.current_user.role == "teacher":
-                    graphs = db.get_all_graphs()
-                    if not graphs:
-                        QMessageBox.information(
-                            self,
-                            "No Data",
-                            "No graphs found in the database"
-                        )
-                        return
-                else:  # Student role
-                    graphs = db.get_user_graphs(self.current_user.id)
-                    if not graphs:
-                        QMessageBox.information(
-                            self,
-                            "No Data",
-                            f"No graphs found for user {self.current_user.username}"
-                        )
-                        return
+            # Initialize the database
+            db = AdvancedDatabase()
 
-                # Update UI
-                self.update_graph_display(graphs)
+            # Get graphs based on user role
+            if self.current_user.role == "teacher":
+                graphs = db.get_all_graphs()
+                if not graphs:
+                    QMessageBox.information(
+                        self,
+                        "No Data",
+                        "No graphs found in the database"
+                    )
+                    return
+            else:  # Student role
+                graphs = db.get_user_graphs(self.current_user.id)
+                if not graphs:
+                    QMessageBox.information(
+                        self,
+                        "No Data",
+                        f"No graphs found for user {self.current_user.username}"
+                    )
+                    return
 
-        except DatabaseConnectionError as e:
-            QMessageBox.critical(
-                self,
-                "Connection Error",
-                f"Unable to connect to database: {str(e)}\nPlease check your connection and try again."
-            )
-            logging.error(f"Database connection error: {str(e)}")
-
-        except DatabaseQueryError as e:
-            QMessageBox.critical(
-                self,
-                "Query Error",
-                f"Error retrieving graphs: {str(e)}\nPlease contact support if this persists."
-            )
-            logging.error(f"Database query error: {str(e)}")
+            # Update UI
+            self.update_graph_display(graphs)
 
         except Exception as e:
             QMessageBox.critical(
