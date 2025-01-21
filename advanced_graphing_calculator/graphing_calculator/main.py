@@ -356,6 +356,51 @@ class MainWindow(QMainWindow):
 
         input_layout.addWidget(range_group)
 
+        self.student_selector = QComboBox()
+        self.student_selector.setMinimumHeight(35)
+        self.student_selector.setEditable(True)
+        self.student_selector.setStyleSheet("""
+                    QComboBox {
+                        background-color: #2d2d2d;
+                        border: 2px solid #3d3d3d;
+                        border-radius: 6px;
+                        color: white;
+                        padding: 8px;
+                        font-size: 14px;
+                    }
+                    QComboBox QLineEdit {
+                        color: white;
+                        padding: 5px;
+                    }
+                """)
+        self.student_selector.currentIndexChanged.connect(self.load_selected_student_graphs)
+        sidebar_layout.addWidget(self.student_selector)
+
+        # Add student graph history
+        student_history_label = QLabel("Student Graph History")
+        student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        sidebar_layout.addWidget(student_history_label)
+
+        self.student_graph_list = QListWidget()
+        self.student_graph_list.setMinimumHeight(30)  # Increased height
+        self.student_graph_list.setStyleSheet("""
+                    QListWidget {
+                        background-color: #2d2d2d;
+                        border: 2px solid #3d3d3d;
+                        border-radius: 6px;
+                        color: white;
+                        font-size: 14px;
+                    }
+                    QListWidget::item {
+                        padding: 10px;
+                    }
+                    QListWidget::item:selected {
+                        background-color: #4CAF50;
+                    }
+                """)
+        self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
+        sidebar_layout.addWidget(self.student_graph_list)
+
         # Teacher-specific controls
         self.teacher_controls = QWidget()
         teacher_layout = QVBoxLayout(self.teacher_controls)
