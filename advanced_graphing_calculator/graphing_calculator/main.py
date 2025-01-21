@@ -676,7 +676,7 @@ class MainWindow(QMainWindow):
                 graphs = db.get_all_graphs()
             else:
                 # Students can load only their own graphs
-                graphs = db.get_user_graphs(self.current_user['id'])
+                graphs = db.get_user_graphs(self.current_user.id)
 
             if not graphs:
                 QMessageBox.information(self, "Info", "No graphs found")
