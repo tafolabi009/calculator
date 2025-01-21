@@ -770,8 +770,8 @@ class MainWindow(QMainWindow):
             raise
 
     def load_selected_student_graphs(self):
-        """Load graphs for selected student"""
-        # First check if student_selector exists and has a selection
+        """Load graphs for the selected student."""
+        # Check if student_selector exists and has a selection
         if not hasattr(self, 'student_selector'):
             QMessageBox.warning(self, "Error", "Student selector not initialized")
             return
@@ -781,29 +781,41 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "No student selected")
             return
 
+        self.setCursor(Qt.CursorShape.WaitCursor)  # Show loading cursor
         try:
-            with AdvancedDatabase() as db:  # Using context manager for database
-                graphs = db.get_student_graphs(selected_student)
+            # Initialize the database
+            db = AdvancedDatabase()
 
-                # Check if student_graph_list exists
-                if not hasattr(self, 'student_graph_list'):
-                    self.student_graph_list = QListWidget()  # Create if it doesn't exist
+            # Get graphs for the selected student
+            graphs = db.get_student_graphs(selected_student)
 
-                self.student_graph_list.clear()
+            # Initialize student_graph_list if it doesn't exist
+            if not hasattr(self, 'student_graph_list'):
+                self.student_graph_list = QListWidget()
 
-                # Initialize student_graph_data if it doesn't exist
-                if not hasattr(self, 'student_graph_data'):
-                    self.student_graph_data = {}
+            self.student_graph_list.clear()
 
+            # Initialize student_graph_data if it doesn't exist
+            if not hasattr(self, 'student_graph_data'):
+                self.student_graph_data = {}
+
+            # Populate the list and data
+            if graphs:
                 for graph in graphs:
                     self.student_graph_list.addItem(graph['name'])
                     self.student_graph_data[graph['name']] = graph
-
-                if not graphs:
-                    QMessageBox.information(self, "Info", f"No graphs found for {selected_student}")
+            else:
+                QMessageBox.information(self, "Info", f"No graphs found for {selected_student}")
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error loading student graphs: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Error loading student graphs: {str(e)}"
+            )
+        finally:
+            self.setCursor(Qt.CursorShape.ArrowCursor)  # Restore normal cursor
+
     def save_graph(self):
         """Save the current graph to the database"""
         if not self.current_user:
