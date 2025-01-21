@@ -355,51 +355,14 @@ class MainWindow(QMainWindow):
         range_layout.addWidget(self.scale_type, 2, 1, 1, 3)
 
         input_layout.addWidget(range_group)
-
-        self.student_selector = QComboBox()
-        self.student_selector.setMinimumHeight(35)
-        self.student_selector.setEditable(True)
-        self.student_selector.setStyleSheet("""
-                    QComboBox {
-                        background-color: #2d2d2d;
-                        border: 2px solid #3d3d3d;
-                        border-radius: 6px;
-                        color: white;
-                        padding: 8px;
-                        font-size: 14px;
-                    }
-                    QComboBox QLineEdit {
-                        color: white;
-                        padding: 5px;
-                    }
-                """)
-        self.student_selector.currentIndexChanged.connect(self.load_selected_student_graphs)
-        sidebar_layout.addWidget(self.student_selector)
-
-        # Add student graph history
-        student_history_label = QLabel("Student Graph History")
-        student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        sidebar_layout.addWidget(student_history_label)
-
+        # Student graph list
         self.student_graph_list = QListWidget()
-        self.student_graph_list.setMinimumHeight(30)  # Increased height
-        self.student_graph_list.setStyleSheet("""
-                    QListWidget {
-                        background-color: #2d2d2d;
-                        border: 2px solid #3d3d3d;
-                        border-radius: 6px;
-                        color: white;
-                        font-size: 14px;
-                    }
-                    QListWidget::item {
-                        padding: 10px;
-                    }
-                    QListWidget::item:selected {
-                        background-color: #4CAF50;
-                    }
-                """)
+        self.student_graph_list.setMinimumHeight(150)
         self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
-        sidebar_layout.addWidget(self.student_graph_list)
+        teacher_layout.addWidget(self.student_graph_list)
+
+        self.teacher_controls.hide()
+
 
         # Teacher-specific controls
         self.teacher_controls = QWidget()
@@ -577,19 +540,15 @@ class MainWindow(QMainWindow):
                 raise ValueError("Received NoneType user object")
 
             self.current_user = user
-            self.calculator.set_user(user)
-
-            # Update UI based on user role
-            if user.role == "teacher":
+            if user.role == 'teacher':
                 self.teacher_controls.show()
-                self.student_comments_widget.hide()
-                self.load_student_list()
-            else:
+                self.student_selector.show()
+                self.load_student_list()  # Populate student selector for teacher view
+            elif user.role == 'student':
                 self.teacher_controls.hide()
-                self.student_comments_widget.show()
-
-            # Update user info label
-            self.user_info.setText(f"Welcome, {user.full_name}\n({user.role.capitalize()})")
+                self.student_selector.hide()
+                self.load_student_graphs()  # Directly load graphs for the student
+            self.user_info.setText(f"Welcome, {user.full_name} ({user.role.capitalize()})")
 
             # Clear any existing graphs
             self.calculator.clear_graphs()
@@ -600,6 +559,30 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
+
+    def load_student_graphs(self):
+        """Load graphs for the logged-in student."""
+        if not self.current_user or self.current_user.role != 'student':
+            return
+
+        self.setCursor(Qt.CursorShape.WaitCursor)  # Show loading cursor
+        try:
+            db = AdvancedDatabase()
+            graphs = db.get_user_graphs(self.current_user.id)
+
+            self.student_graph_list.clear()
+            self.student_graph_data = {}
+
+            if graphs:
+                for graph in graphs:
+                    self.student_graph_list.addItem(graph['name'])
+                    self.student_graph_data[graph['name']] = graph
+            else:
+                QMessageBox.information(self, "No Data", "No graphs found for your account.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
+        finally:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def save_graph_image(self):
         """Save the current graph as a PNG image"""
@@ -815,10 +798,8 @@ class MainWindow(QMainWindow):
             raise
 
     def load_selected_student_graphs(self):
-        """Load graphs for the selected student."""
-        # Check if student_selector exists and has a selection
-        if not hasattr(self, 'student_selector'):
-            QMessageBox.warning(self, "Error", "Student selector not initialized")
+        """Load graphs for the selected student (teacher-specific)."""
+        if not hasattr(self, 'student_selector') or self.current_user.role != 'teacher':
             return
 
         selected_student = self.student_selector.currentText()
@@ -828,38 +809,22 @@ class MainWindow(QMainWindow):
 
         self.setCursor(Qt.CursorShape.WaitCursor)  # Show loading cursor
         try:
-            # Initialize the database
             db = AdvancedDatabase()
-
-            # Get graphs for the selected student
             graphs = db.get_student_graphs(selected_student)
 
-            # Initialize student_graph_list if it doesn't exist
-            if not hasattr(self, 'student_graph_list'):
-                self.student_graph_list = QListWidget()
-
             self.student_graph_list.clear()
+            self.student_graph_data = {}
 
-            # Initialize student_graph_data if it doesn't exist
-            if not hasattr(self, 'student_graph_data'):
-                self.student_graph_data = {}
-
-            # Populate the list and data
             if graphs:
                 for graph in graphs:
                     self.student_graph_list.addItem(graph['name'])
                     self.student_graph_data[graph['name']] = graph
             else:
                 QMessageBox.information(self, "Info", f"No graphs found for {selected_student}")
-
         except Exception as e:
-            QMessageBox.critical(
-                self,
-                "Error",
-                f"Error loading student graphs: {str(e)}"
-            )
+            QMessageBox.critical(self, "Error", f"Error loading student graphs: {str(e)}")
         finally:
-            self.setCursor(Qt.CursorShape.ArrowCursor)  # Restore normal cursor
+            self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def save_graph(self):
         """Save the current graph to the database"""
