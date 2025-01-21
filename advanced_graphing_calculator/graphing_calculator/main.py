@@ -1,4 +1,4 @@
-
+import logging
 import numpy as np
 from PyQt6.QtGui import QPalette, QColor
 import numpy as np
@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QDoubleSpinBox, QTextEdit, QMessageBox, QGridLayout,
                              QListWidget, QInputDialog, QFileDialog)
 from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtWidgets import QListWidgetItem
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
