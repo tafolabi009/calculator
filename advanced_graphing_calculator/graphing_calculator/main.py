@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
                              QDoubleSpinBox,
                              QTextEdit, QMessageBox, QGridLayout,
-                             QListWidget, QInputDialog, )
+                             QListWidget, QInputDialog,)
 from PyQt6.QtWidgets import QFileDialog
 from PyQt6.QtCore import Qt, QSize
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
