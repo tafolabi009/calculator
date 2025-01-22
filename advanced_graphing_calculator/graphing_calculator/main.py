@@ -140,31 +140,13 @@ class MainWindow(QMainWindow):
         self.history_list = QListWidget()
         self.graph_data = {}
         self.student_graph_data = {}
-        self.teacher_controls = None
-        self.student_comments_widget = None
-
 
         # Main layout
         main_layout = QHBoxLayout()
 
-        # Expand teacher controls
-        self.teacher_controls = QWidget()
-        teacher_layout = QVBoxLayout(self.teacher_controls)
-
-        self.comment_input = QTextEdit()
-        self.comment_input.setMinimumHeight(50)
-        self.comment_input = CommentInput(self)
-
-        teacher_layout.addWidget(QLabel("Add Comment"))
-        teacher_layout.addWidget(self.comment_input)
-
-        add_comment_button = ModernButton("Add Comment")
-        add_comment_button.clicked.connect(self.add_comment)
-        teacher_layout.addWidget(add_comment_button)
-
-        # Create sidebar with modern styling
+        # Create sidebar
         sidebar = QWidget()
-        sidebar.setMinimumWidth(400)  # Increased sidebar width
+        sidebar.setMinimumWidth(400)
         sidebar.setMaximumWidth(450)
         sidebar.setStyleSheet("""
             QWidget {
@@ -173,10 +155,10 @@ class MainWindow(QMainWindow):
             }
         """)
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(20, 20, 20, 20)  # Increased margins
-        sidebar_layout.setSpacing(10)  # Increased spacing
+        sidebar_layout.setContentsMargins(20, 20, 20, 20)
+        sidebar_layout.setSpacing(10)
 
-        # Header section with user info and logout
+        # Header section
         header_widget = QWidget()
         header_layout = QVBoxLayout(header_widget)
         header_layout.setSpacing(5)
@@ -192,9 +174,8 @@ class MainWindow(QMainWindow):
         """)
         header_layout.addWidget(self.user_info)
 
-        # Add logout button
         logout_btn = ModernButton("Logout")
-        logout_btn.setMinimumHeight(35)  # Increased button height
+        logout_btn.setMinimumHeight(35)
         logout_btn.setStyleSheet("""
             QPushButton {
                 background-color: #ff5555;
@@ -215,7 +196,7 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(logout_btn)
         sidebar_layout.addWidget(header_widget)
 
-        # Expression input with improved styling
+        # Expression input group
         input_group = QWidget()
         input_layout = QVBoxLayout(input_group)
         input_layout.setSpacing(15)
@@ -225,17 +206,16 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(input_label)
 
         self.expr_input = ModernLineEdit()
-        self.expr_input.setMinimumHeight(35)  # Increased input height
+        self.expr_input.setMinimumHeight(35)
         self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
         input_layout.addWidget(self.expr_input)
 
         self.second_expr_input = ModernLineEdit()
-        self.second_expr_input.setMinimumHeight(35)  # Increased input height
+        self.second_expr_input.setMinimumHeight(35)
         self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
         input_layout.addWidget(self.second_expr_input)
-        sidebar_layout.addWidget(input_group)
 
-        # Add variable selector and range controls
+        # Controls group (variable selector and ranges)
         controls_group = QWidget()
         controls_layout = QVBoxLayout(controls_group)
 
@@ -245,17 +225,17 @@ class MainWindow(QMainWindow):
 
         var_label = QLabel("Variable:")
         var_label.setStyleSheet("color: white; font-weight: bold;")
-        self.var_selector = QComboBox()  # Make it an instance variable with self
+        self.var_selector = QComboBox()
         self.var_selector.addItems(['x', 'y', 't'])
         self.var_selector.setStyleSheet("""
-                    QComboBox {
-                        background-color: #2d2d2d;
-                        color: white;
-                        border: 2px solid #3d3d3d;
-                        border-radius: 4px;
-                        padding: 5px;
-                    }
-                """)
+            QComboBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
         var_selector_layout.addWidget(var_label)
         var_selector_layout.addWidget(self.var_selector)
         controls_layout.addWidget(var_selector_group)
@@ -269,34 +249,33 @@ class MainWindow(QMainWindow):
         x_label.setStyleSheet("color: white; font-weight: bold;")
         range_layout.addWidget(x_label, 0, 0)
 
-        self.x_min = QDoubleSpinBox()  # Make it an instance variable
+        self.x_min = QDoubleSpinBox()
         self.x_min.setRange(-1000, 1000)
         self.x_min.setValue(-10)
         self.x_min.setStyleSheet("""
-                    QDoubleSpinBox {
-                        background-color: #2d2d2d;
-                        color: white;
-                        border: 2px solid #3d3d3d;
-                        border-radius: 4px;
-                        padding: 5px;
-                    }
-                """)
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
         range_layout.addWidget(self.x_min, 0, 1)
-
         range_layout.addWidget(QLabel("to", styleSheet="color: white;"), 0, 2)
 
-        self.x_max = QDoubleSpinBox()  # Make it an instance variable
+        self.x_max = QDoubleSpinBox()
         self.x_max.setRange(-1000, 1000)
         self.x_max.setValue(10)
         self.x_max.setStyleSheet("""
-                    QDoubleSpinBox {
-                        background-color: #2d2d2d;
-                        color: white;
-                        border: 2px solid #3d3d3d;
-                        border-radius: 4px;
-                        padding: 5px;
-                    }
-                """)
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
         range_layout.addWidget(self.x_max, 0, 3)
 
         # Y range
@@ -304,38 +283,35 @@ class MainWindow(QMainWindow):
         y_label.setStyleSheet("color: white; font-weight: bold;")
         range_layout.addWidget(y_label, 1, 0)
 
-        self.y_min = QDoubleSpinBox()  # Make it an instance variable
+        self.y_min = QDoubleSpinBox()
         self.y_min.setRange(-1000, 1000)
         self.y_min.setValue(-10)
         self.y_min.setStyleSheet("""
-                    QDoubleSpinBox {
-                        background-color: #2d2d2d;
-                        color: white;
-                        border: 2px solid #3d3d3d;
-                        border-radius: 4px;
-                        padding: 5px;
-                    }
-                """)
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
         range_layout.addWidget(self.y_min, 1, 1)
-
         range_layout.addWidget(QLabel("to", styleSheet="color: white;"), 1, 2)
 
-        self.y_max = QDoubleSpinBox()  # Make it an instance variable
+        self.y_max = QDoubleSpinBox()
         self.y_max.setRange(-1000, 1000)
         self.y_max.setValue(10)
         self.y_max.setStyleSheet("""
-                    QDoubleSpinBox {
-                        background-color: #2d2d2d;
-                        color: white;
-                        border: 2px solid #3d3d3d;
-                        border-radius: 4px;
-                        padding: 5px;
-                    }
-                """)
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
         range_layout.addWidget(self.y_max, 1, 3)
 
-        controls_layout.addWidget(range_group)
-        input_layout.addWidget(controls_group)
         # Scale type
         scale_label = QLabel("Scale Type:")
         scale_label.setStyleSheet("color: white; font-weight: bold;")
@@ -344,27 +320,46 @@ class MainWindow(QMainWindow):
         self.scale_type = QComboBox()
         self.scale_type.addItems(['Radians', 'Degrees'])
         self.scale_type.setStyleSheet("""
-                    QComboBox {
-                        background-color: #2d2d2d;
-                        color: white;
-                        border: 2px solid #3d3d3d;
-                        border-radius: 4px;
-                        padding: 5px;
-                    }
-                """)
+            QComboBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
         range_layout.addWidget(self.scale_type, 2, 1, 1, 3)
 
-        input_layout.addWidget(range_group)
-        # Student graph list
-        self.student_graph_list = QListWidget()
+        controls_layout.addWidget(range_group)
+        input_layout.addWidget(controls_group)
+        sidebar_layout.addWidget(input_group)
+
+        # Student graph history
+        student_history_label = QLabel("My Graph History")
+        student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        sidebar_layout.addWidget(student_history_label)
+
+        self.student_graph_list = QListWidget()  # Changed name to match your function
         self.student_graph_list.setMinimumHeight(150)
+        self.student_graph_list.setStyleSheet("""
+            QListWidget {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                font-size: 14px;
+            }
+            QListWidget::item {
+                padding: 10px;
+            }
+            QListWidget::item:selected {
+                background-color: #4CAF50;
+            }
+        """)
         self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
-        teacher_layout.addWidget(self.student_graph_list)
+        sidebar_layout.addWidget(self.student_graph_list)
 
-        self.teacher_controls.hide()
-
-
-        # Teacher-specific controls
+        # Teacher controls
         self.teacher_controls = QWidget()
         teacher_layout = QVBoxLayout(self.teacher_controls)
         teacher_layout.setSpacing(15)
@@ -373,7 +368,7 @@ class MainWindow(QMainWindow):
         teacher_label.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
         teacher_layout.addWidget(teacher_label)
 
-        # Add a searchable student selector
+        # Student selector
         self.student_selector = QComboBox()
         self.student_selector.setMinimumHeight(35)
         self.student_selector.setEditable(True)
@@ -394,13 +389,13 @@ class MainWindow(QMainWindow):
         self.student_selector.currentIndexChanged.connect(self.load_selected_student_graphs)
         teacher_layout.addWidget(self.student_selector)
 
-        # Add student graph history
+        # Student graph history
         student_history_label = QLabel("Student Graph History")
         student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         teacher_layout.addWidget(student_history_label)
 
         self.student_graph_list = QListWidget()
-        self.student_graph_list.setMinimumHeight(30)  # Increased height
+        self.student_graph_list.setMinimumHeight(150)
         self.student_graph_list.setStyleSheet("""
             QListWidget {
                 background-color: #2d2d2d;
@@ -419,30 +414,28 @@ class MainWindow(QMainWindow):
         self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
         teacher_layout.addWidget(self.student_graph_list)
 
-        # Add comments section
+        # Comment section
         comment_label = QLabel("Add Comment")
         comment_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         teacher_layout.addWidget(comment_label)
 
-        # In the teacher controls section, replace the comment input creation with:
-        self.comment_input = CommentInput(self)  # Use custom CommentInput
+        self.comment_input = CommentInput(self)
         self.comment_input.setMinimumHeight(60)
         self.comment_input.setPlaceholderText("Write a comment... (Press Enter to submit)")
         self.comment_input.setStyleSheet("""
-                    QTextEdit {
-                        background-color: #2d2d2d;
-                        border: 2px solid #3d3d3d;
-                        border-radius: 6px;
-                        color: white;
-                        padding: 10px;
-                        font-size: 14px;
-                    }
-                """)
+            QTextEdit {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                padding: 10px;
+                font-size: 14px;
+            }
+        """)
         teacher_layout.addWidget(self.comment_input)
 
         sidebar_layout.addWidget(self.teacher_controls)
-        sidebar_layout.addStretch()
-        main_layout.addWidget(sidebar)
+        self.teacher_controls.hide()  # Initially hidden
 
         # Main content area
         content = QWidget()
@@ -450,20 +443,19 @@ class MainWindow(QMainWindow):
         content_layout.setContentsMargins(20, 20, 20, 20)
         content_layout.setSpacing(20)
 
-
         # Graph canvas
         canvas_container = QWidget()
         canvas_layout = QVBoxLayout(canvas_container)
-        self.canvas = GraphCanvas(self.calculator)  # Pass the calculator instance
+        self.canvas = GraphCanvas(self.calculator)
         canvas_layout.addWidget(self.canvas)
         content_layout.addWidget(canvas_container)
 
-        # Action buttons container
+        # Action buttons
         buttons_container = QWidget()
-        buttons_layout = QHBoxLayout(buttons_container)  # Ensure this is a proper layout
+        buttons_layout = QHBoxLayout(buttons_container)
         buttons_layout.setSpacing(10)
 
-        # Left side buttons
+        # Left buttons
         left_buttons = QWidget()
         left_layout = QHBoxLayout(left_buttons)
         left_layout.setSpacing(10)
@@ -480,9 +472,9 @@ class MainWindow(QMainWindow):
         clear_btn.clicked.connect(self.clear_graph)
         left_layout.addWidget(clear_btn)
 
-        buttons_layout.addWidget(left_buttons)  # Add left buttons to the main layout
+        buttons_layout.addWidget(left_buttons)
 
-        # Right side buttons
+        # Right buttons
         right_buttons = QWidget()
         right_layout = QHBoxLayout(right_buttons)
         right_layout.setSpacing(10)
@@ -495,18 +487,10 @@ class MainWindow(QMainWindow):
         save_image_btn.clicked.connect(self.save_graph_image)
         right_layout.addWidget(save_image_btn)
 
-        buttons_layout.addWidget(right_buttons)  # Add right buttons to the main layout
+        buttons_layout.addWidget(right_buttons)
         content_layout.addWidget(buttons_container)
 
-        # Comments section for students
-        self.student_comments_widget = QWidget()
-        comments_layout = QVBoxLayout(self.student_comments_widget)
-
-        comments_label = QLabel("Teacher Comments")
-        comments_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        comments_layout.addWidget(comments_label)
-
-
+        # Comments list
         self.comments_list = QListWidget()
         self.comments_list.setMinimumHeight(150)
         self.comments_list.setStyleSheet("""
@@ -521,12 +505,12 @@ class MainWindow(QMainWindow):
                 padding: 10px;
             }
         """)
-        comments_layout.addWidget(self.comments_list)
         content_layout.addWidget(self.comments_list)
 
+        main_layout.addWidget(sidebar)
         main_layout.addWidget(content)
 
-        # Set central widget and layout
+        # Set central widget
         central_widget = QWidget()
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
@@ -541,6 +525,7 @@ class MainWindow(QMainWindow):
                 raise ValueError("Received NoneType user object")
 
             self.current_user = user
+
             if user.role == 'teacher':
                 self.teacher_controls.show()
                 self.student_selector.show()
@@ -548,10 +533,14 @@ class MainWindow(QMainWindow):
             elif user.role == 'student':
                 self.teacher_controls.hide()
                 self.student_selector.hide()
-                self.load_student_graphs()  # Ensure this is called for students
+
+                # Add student graph list to the sidebar if not already present
+                if not self.student_graph_list.parent():
+                    sidebar_layout.addWidget(self.student_graph_list)
+
+                self.load_student_graphs()
 
             self.user_info.setText(f"Welcome, {user.full_name} ({user.role.capitalize()})")
-
             self.update_history()
             self.adjustSize()
         except Exception as e:
@@ -583,6 +572,40 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
         finally:
             self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def load_graph_from_history(self, item):
+        """Load a graph when selected from the history list."""
+        try:
+            graph_name = item.text()
+            if graph_name in self.student_graph_data:
+                graph_data = self.student_graph_data[graph_name]
+
+                # Update inputs with graph data
+                self.expr_input.setText(graph_data.get('expression1', ''))
+                self.second_expr_input.setText(graph_data.get('expression2', ''))
+
+                # Update ranges if they exist in graph data
+                if 'x_min' in graph_data:
+                    self.x_min.setValue(float(graph_data['x_min']))
+                if 'x_max' in graph_data:
+                    self.x_max.setValue(float(graph_data['x_max']))
+                if 'y_min' in graph_data:
+                    self.y_min.setValue(float(graph_data['y_min']))
+                if 'y_max' in graph_data:
+                    self.y_max.setValue(float(graph_data['y_max']))
+
+                # Plot the graph
+                self.plot_graph()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading graph: {str(e)}")
+
+    def setup_student_view(self):
+        """Set up the interface for student users."""
+        if self.current_user and self.current_user.role == 'student':
+            self.teacher_controls.hide()
+            self.load_student_graphs()  # Load student's graphs into history
+        else:
+            self.teacher_controls.show()
 
     def save_graph_image(self):
         """Save the current graph as a PNG image"""
