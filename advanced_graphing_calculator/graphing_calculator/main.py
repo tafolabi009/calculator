@@ -533,8 +533,9 @@ class MainWindow(QMainWindow):
 
         # Apply dark theme
         self.setPalette(DarkPalette())
+
     def set_user(self, user: User):
-        """Set the current user and update UI accordingly"""
+        """Set the current user and update the UI."""
         try:
             if user is None:
                 raise ValueError("Received NoneType user object")
@@ -543,20 +544,16 @@ class MainWindow(QMainWindow):
             if user.role == 'teacher':
                 self.teacher_controls.show()
                 self.student_selector.show()
-                self.load_student_list()  # Populate student selector for teacher view
+                self.load_student_list()
             elif user.role == 'student':
                 self.teacher_controls.hide()
                 self.student_selector.hide()
-                self.load_student_graphs()  # Directly load graphs for the student
+                self.load_student_graphs()  # Ensure this is called for students
+
             self.user_info.setText(f"Welcome, {user.full_name} ({user.role.capitalize()})")
 
-            # Clear any existing graphs
-            self.calculator.clear_graphs()
             self.update_history()
-
-            # Update UI layout
             self.adjustSize()
-
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
 
@@ -565,7 +562,7 @@ class MainWindow(QMainWindow):
         if not self.current_user or self.current_user.role != 'student':
             return
 
-        self.setCursor(Qt.CursorShape.WaitCursor)  # Show loading cursor
+        self.setCursor(Qt.CursorShape.WaitCursor)
         try:
             db = AdvancedDatabase()
             graphs = db.get_user_graphs(self.current_user.id)
@@ -575,8 +572,11 @@ class MainWindow(QMainWindow):
 
             if graphs:
                 for graph in graphs:
-                    self.student_graph_list.addItem(graph['name'])
-                    self.student_graph_data[graph['name']] = graph
+                    graph_name = graph.get('name', 'Unnamed Graph')
+                    graph_id = graph.get('id')
+                    if graph_id:
+                        self.student_graph_list.addItem(graph_name)
+                        self.student_graph_data[graph_name] = graph
             else:
                 QMessageBox.information(self, "No Data", "No graphs found for your account.")
         except Exception as e:
@@ -671,14 +671,21 @@ class MainWindow(QMainWindow):
 
     def update_comments(self, graph_id):
         """Update the comments list for the selected graph."""
+        if not graph_id:
+            QMessageBox.warning(self, "Error", "Graph ID is missing.")
+            return
+
         try:
             db = AdvancedDatabase()
             comments = db.get_graph_comments(graph_id)
 
             self.comments_list.clear()
-            for comment in comments:
-                item_text = f"{comment['teacher_name']} ({comment['timestamp']}): {comment['comment']}"
-                self.comments_list.addItem(item_text)
+            if comments:
+                for comment in comments:
+                    item_text = f"{comment['teacher_name']} ({comment['timestamp']}): {comment['comment']}"
+                    self.comments_list.addItem(item_text)
+            else:
+                QMessageBox.information(self, "No Comments", "No comments found for this graph.")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading comments: {str(e)}")
 
@@ -913,27 +920,28 @@ class MainWindow(QMainWindow):
             return
 
         graph_name = item.text()
-        graph = self.graph_data.get(graph_name)
+        graph = self.student_graph_data.get(graph_name)
 
         if not graph:
             QMessageBox.warning(self, "Error", "Graph not found in the data")
             return
 
         try:
-            # Update the input fields with graph details
-            self.expr_input.setText(graph['expression'])
-            self.x_min.setValue(graph['x_min'])
-            self.x_max.setValue(graph['x_max'])
-            self.y_min.setValue(graph['y_min'])
-            self.y_max.setValue(graph['y_max'])
-            self.scale_type.setCurrentText(graph['scale_type'].capitalize())
+            # Update input fields with graph details
+            self.expr_input.setText(graph.get('expression', ''))
+            self.x_min.setValue(graph.get('x_min', -10))
+            self.x_max.setValue(graph.get('x_max', 10))
+            self.y_min.setValue(graph.get('y_min', -10))
+            self.y_max.setValue(graph.get('y_max', 10))
+            self.scale_type.setCurrentText(graph.get('scale_type', 'radians').capitalize())
 
             # Plot the graph
             self.plot_graph()
 
-            # If the user is a teacher, update the comments section
-            if self.current_user.role == "teacher":
-                self.update_comments(graph['id'])
+            # Update the comments section
+            graph_id = graph.get('id')
+            if graph_id:
+                self.update_comments(graph_id)
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading graph: {str(e)}")
