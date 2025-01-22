@@ -334,23 +334,29 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(controls_group)
         sidebar_layout.addWidget(input_group)
 
+        self.student_controls = QWidget()
+        student_layout = QVBoxLayout(self.student_controls)
+        student_layout.setSpacing(10)
+
+
+
         # Student graph history
         student_history_label = QLabel("My Graph History")
         student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         sidebar_layout.addWidget(student_history_label)
 
-        self.student_graph_list = QListWidget()  # Changed name to match your function
-        self.student_graph_list.setMinimumHeight(150)
+        self.student_graph_list = QListWidget()
+        self.student_graph_list.setMinimumHeight(50)
         self.student_graph_list.setStyleSheet("""
             QListWidget {
                 background-color: #2d2d2d;
                 border: 2px solid #3d3d3d;
                 border-radius: 6px;
                 color: white;
-                font-size: 14px;
+                font-size: 9px;
             }
             QListWidget::item {
-                padding: 10px;
+                padding: 14px;
             }
             QListWidget::item:selected {
                 background-color: #4CAF50;
@@ -358,6 +364,7 @@ class MainWindow(QMainWindow):
         """)
         self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
         sidebar_layout.addWidget(self.student_graph_list)
+        self.load_student_graphs()
 
         # Teacher controls
         self.teacher_controls = QWidget()
@@ -395,14 +402,14 @@ class MainWindow(QMainWindow):
         teacher_layout.addWidget(student_history_label)
 
         self.student_graph_list = QListWidget()
-        self.student_graph_list.setMinimumHeight(150)
+        self.student_graph_list.setMinimumHeight(50)
         self.student_graph_list.setStyleSheet("""
             QListWidget {
                 background-color: #2d2d2d;
                 border: 2px solid #3d3d3d;
                 border-radius: 6px;
                 color: white;
-                font-size: 14px;
+                font-size: 9px;
             }
             QListWidget::item {
                 padding: 10px;
@@ -521,8 +528,8 @@ class MainWindow(QMainWindow):
     def set_user(self, user: User):
         """Set the current user and update the UI."""
         try:
-            if user is None:
-                raise ValueError("Received NoneType user object")
+            if not user:
+                raise ValueError("No user provided")
 
             self.current_user = user
 
@@ -530,45 +537,56 @@ class MainWindow(QMainWindow):
                 self.teacher_controls.show()
                 self.student_selector.show()
                 self.load_student_list()
+                self.student_controls.hide()
             elif user.role == 'student':
                 self.teacher_controls.hide()
                 self.student_selector.hide()
+                self.student_controls.show()
 
-                # Add student graph list to the sidebar if not already present
+                # Ensure the student graph list is in the sidebar
                 if not self.student_graph_list.parent():
                     sidebar_layout.addWidget(self.student_graph_list)
 
+                # Load graphs for the logged-in student
                 self.load_student_graphs()
 
+            # Update user info label
             self.user_info.setText(f"Welcome, {user.full_name} ({user.role.capitalize()})")
-            self.update_history()
-            self.adjustSize()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
 
     def load_student_graphs(self):
-        """Load graphs for the logged-in student."""
-        if not self.current_user or self.current_user.role != 'student':
-            return
+        """Load graphs for the logged-in student only."""
+        print("Starting load_student_graphs()")  # Debug print
+        print(f"Current user: {self.current_user}")  # Debug print
 
         self.setCursor(Qt.CursorShape.WaitCursor)
         try:
+            # Fetch the student's graphs from the database
             db = AdvancedDatabase()
             graphs = db.get_user_graphs(self.current_user.id)
+            print(f"Fetched graphs from database: {graphs}")  # Debug print
 
+            # Clear existing graph list and data
             self.student_graph_list.clear()
             self.student_graph_data = {}
 
+            # Populate the graph list with data specific to the student
             if graphs:
                 for graph in graphs:
                     graph_name = graph.get('name', 'Unnamed Graph')
                     graph_id = graph.get('id')
+                    print(f"Adding graph to list: {graph_name}")  # Debug print
+
                     if graph_id:
                         self.student_graph_list.addItem(graph_name)
                         self.student_graph_data[graph_name] = graph
+                print(f"Total graphs added to list: {self.student_graph_list.count()}")  # Debug print
             else:
+                print("No graphs found for user")  # Debug print
                 QMessageBox.information(self, "No Data", "No graphs found for your account.")
         except Exception as e:
+            print(f"Error in load_student_graphs: {str(e)}")  # Debug print
             QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
         finally:
             self.setCursor(Qt.CursorShape.ArrowCursor)
@@ -664,7 +682,6 @@ class MainWindow(QMainWindow):
             # Reset UI
             self.user_info.setText("Not logged in")
             self.teacher_controls.hide()
-            self.student_comments_widget.hide()
             self.expr_input.clear()
             self.second_expr_input.clear()
 
