@@ -671,6 +671,7 @@ class MainWindow(QMainWindow):
             self.auth_window = AuthWindow()
             self.auth_window.login_successful.connect(self.set_user)
             self.auth_window.show()
+            self.loop()
             self.close()
 
         except Exception as e:
@@ -935,7 +936,7 @@ class MainWindow(QMainWindow):
         try:
             # Clear the plot
             self.canvas.axes.clear()
-            self.canvas.axes.grid(True, color='#666666')
+            self.canvas.axes.grid(True, color='#666666', linestyle='--', alpha=0.5)
 
             # Get input values
             expression = self.expr_input.text().strip()
@@ -949,23 +950,154 @@ class MainWindow(QMainWindow):
             y_max = self.y_max.value()
             scale_type = self.scale_type.currentText().lower()
 
-            # Generate x values
-            x_values = np.linspace(x_min, x_max, 1000)
-            y_values = np.vectorize(
-                lambda x: self.calculator.evaluate_expression(expression, x, scale_type)
-            )(x_values)
+            # Generate x values based on scale type
+            if scale_type == 'log':
+                x_min = max(1e-10, x_min)  # Prevent log(0) errors
+                x_values = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
+                self.canvas.axes.set_xscale('log')
+            else:
+                x_values = np.linspace(x_min, x_max, 1000)
 
-            # Plot the graph
-            self.canvas.axes.plot(x_values, y_values, label='Graph')
+            def advanced_eval(x, expr):
+                try:
+                    # Advanced mathematical functions dictionary
+                    math_funcs = {
+                        # Basic functions
+                        'ln': np.log,
+                        'log': np.log10,
+                        'sin': np.sin,
+                        'cos': np.cos,
+                        'tan': np.tan,
+                        'sqrt': np.sqrt,
+                        'exp': np.exp,
+                        'abs': np.abs,
 
-            # Set axis limits
-            self.canvas.axes.set_xlim(x_min, x_max)
+                        # Advanced functions
+                        'sinh': np.sinh,
+                        'cosh': np.cosh,
+                        'tanh': np.tanh,
+                        'asin': np.arcsin,
+                        'acos': np.arccos,
+                        'atan': np.arctan,
+                        'sec': lambda x: 1 / np.cos(x),
+                        'csc': lambda x: 1 / np.sin(x),
+                        'cot': lambda x: 1 / np.tan(x),
+
+                        # Special functions
+                        'gamma': special.gamma,
+                        'erf': special.erf,
+                        'erfc': special.erfc,
+                        'beta': special.beta,
+                        'factorial': special.factorial,
+
+                        # Constants
+                        'pi': np.pi,
+                        'e': np.e,
+                        'inf': np.inf,
+                        'golden': (1 + np.sqrt(5)) / 2
+                    }
+
+                    # Handle piecewise functions
+                    if 'piecewise' in expr.lower():
+                        return eval_piecewise(x, expr, math_funcs)
+
+                    # Handle lambda functions
+                    if 'lambda' in expr.lower():
+                        return eval_lambda(x, expr, math_funcs)
+
+                    # Handle quadratic and polynomial equations
+                    if 'quad(' in expr.lower():
+                        return eval_quadratic(x, expr)
+
+                    # Convert expression to SymPy format for symbolic computation
+                    expr = sympify(expr)
+                    f = lambdify('x', expr, modules=['numpy', math_funcs])
+                    return f(x)
+
+                except Exception as e:
+                    raise ValueError(f"Error evaluating expression: {str(e)}")
+
+            def eval_piecewise(x, expr, math_funcs):
+                """Evaluate piecewise functions"""
+                # Example format: piecewise(x < 0: -x, x >= 0: x^2)
+                try:
+                    conditions = expr.split('piecewise(')[1].strip(')').split(',')
+                    for condition in conditions:
+                        cond, func = condition.split(':')
+                        if eval(cond, {"__builtins__": {}}, {"x": x, **math_funcs}):
+                            return eval(func, {"__builtins__": {}}, {"x": x, **math_funcs})
+                    return np.nan
+                except Exception as e:
+                    raise ValueError(f"Invalid piecewise function format: {str(e)}")
+
+            def eval_lambda(x, expr, math_funcs):
+                """Evaluate lambda functions"""
+                # Example format: lambda x: x^2 + 2*x + 1
+                try:
+                    func_body = expr.split('lambda x:')[1].strip()
+                    return eval(func_body, {"__builtins__": {}}, {"x": x, **math_funcs})
+                except Exception as e:
+                    raise ValueError(f"Invalid lambda function format: {str(e)}")
+
+            def eval_quadratic(x, expr):
+                """Evaluate quadratic equations"""
+                # Example format: quad(a,b,c) for ax^2 + bx + c
+                try:
+                    params = expr.split('quad(')[1].strip(')').split(',')
+                    a, b, c = map(float, params)
+                    return a * x ** 2 + b * x + c
+                except Exception as e:
+                    raise ValueError(f"Invalid quadratic equation format: {str(e)}")
+
+            # Calculate y values with vectorization and error handling
+            y_values = np.vectorize(lambda x: advanced_eval(x, expression))(x_values)
+
+            # Handle complex numbers
+            if np.iscomplexobj(y_values):
+                # Plot real and imaginary parts separately
+                self.canvas.axes.plot(x_values, y_values.real,
+                                      label=f"Re({expression})",
+                                      linewidth=2,
+                                      color='#1f77b4')
+                self.canvas.axes.plot(x_values, y_values.imag,
+                                      label=f"Im({expression})",
+                                      linewidth=2,
+                                      linestyle='--',
+                                      color='#ff7f0e')
+            else:
+                # Handle infinities and NaN values
+                mask = np.isfinite(y_values)
+                x_values = x_values[mask]
+                y_values = y_values[mask]
+
+                # Plot regular function
+                self.canvas.axes.plot(x_values, y_values,
+                                      label=expression,
+                                      linewidth=2,
+                                      color='#1f77b4')
+
+            # Set axis scales and limits
+            if self.y_scale_type.currentText().lower() == 'log':
+                self.canvas.axes.set_yscale('log')
             self.canvas.axes.set_ylim(y_min, y_max)
+            self.canvas.axes.set_xlim(x_min, x_max)
 
-            # Add labels and legend
-            self.canvas.axes.set_xlabel("x")
-            self.canvas.axes.set_ylabel("y")
-            self.canvas.axes.legend()
+            # Enhance graph appearance
+            self.canvas.axes.set_xlabel("x", fontsize=10)
+            self.canvas.axes.set_ylabel("y", fontsize=10)
+            self.canvas.axes.legend(fontsize=10)
+            self.canvas.axes.spines['top'].set_visible(False)
+            self.canvas.axes.spines['right'].set_visible(False)
+            self.canvas.axes.set_title(f"Graph of {expression}", pad=10)
+
+            # Add coordinate axes
+            if x_min <= 0 <= x_max:
+                self.canvas.axes.axvline(x=0, color='k', linestyle='-', alpha=0.3)
+            if y_min <= 0 <= y_max:
+                self.canvas.axes.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+
+            # Add grid for better readability
+            self.canvas.axes.grid(True, which='both', linestyle='--', alpha=0.3)
 
             # Refresh the canvas
             self.canvas.draw()
