@@ -337,20 +337,20 @@ class MainWindow(QMainWindow):
         self.student_graph_list = QListWidget()
         self.student_graph_list.setMinimumHeight(50)
         self.student_graph_list.setStyleSheet("""
-            QListWidget {
-                background-color: #2d2d2d;
-                border: 2px solid #3d3d3d;
-                border-radius: 6px;
-                color: white;
-                font-size: 9px;
-            }
-            QListWidget::item {
-                padding: 14px;
-            }
-            QListWidget::item:selected {
-                background-color: #4CAF50;
-            }
-        """)
+                    QListWidget {
+                        background-color: #2d2d2d;
+                        border: 2px solid #3d3d3d;
+                        border-radius: 6px;
+                        color: white;
+                        font-size: 9px;
+                    }
+                    QListWidget::item {
+                        padding: 14px;
+                    }
+                    QListWidget::item:selected {
+                        background-color: #4CAF50;
+                    }
+                """)
         self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
         sidebar_layout.addWidget(self.student_graph_list)
         self.load_student_graphs()
