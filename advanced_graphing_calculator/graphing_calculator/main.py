@@ -957,38 +957,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error adding comment: {str(e)}")
 
-    def load_graph_from_history(self, item):
-        """Load and display a graph based on selection."""
-        if not item:
-            return
-
-        graph_name = item.text()
-        graph = self.student_graph_data.get(graph_name)
-
-        if not graph:
-            QMessageBox.warning(self, "Error", "Graph not found in the data")
-            return
-
-        try:
-            # Update input fields with graph details
-            self.expr_input.setText(graph.get('expression', ''))
-            self.x_min.setValue(graph.get('x_min', -10))
-            self.x_max.setValue(graph.get('x_max', 10))
-            self.y_min.setValue(graph.get('y_min', -10))
-            self.y_max.setValue(graph.get('y_max', 10))
-            self.scale_type.setCurrentText(graph.get('scale_type', 'radians').capitalize())
-
-            # Plot the graph
-            self.plot_graph()
-
-            # Update the comments section
-            graph_id = graph.get('id')
-            if graph_id:
-                self.update_comments(graph_id)
-
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error loading graph: {str(e)}")
-
     def plot_graph(self):
         try:
             # Clear the plot
