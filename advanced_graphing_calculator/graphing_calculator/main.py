@@ -1,8 +1,6 @@
 import logging
 import numpy as np
 from PyQt6.QtGui import QPalette, QColor
-import numpy as np
-from PyQt6.QtGui import QPalette, QColor
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
                              QDoubleSpinBox, QTextEdit, QMessageBox, QGridLayout,
@@ -15,8 +13,6 @@ from matplotlib.figure import Figure
 from graphing_calculator import GraphingCalculator, Graph
 from auth_system import User
 from database import AdvancedDatabase
-
-
 
 class DarkPalette(QPalette):
     def __init__(self):
@@ -33,7 +29,6 @@ class DarkPalette(QPalette):
         self.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
         self.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
         self.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-
 
 class ModernButton(QPushButton):
     def __init__(self, *args, **kwargs):
@@ -55,7 +50,6 @@ class ModernButton(QPushButton):
             }
         """)
 
-
 class ModernLineEdit(QLineEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,7 +67,6 @@ class ModernLineEdit(QLineEdit):
             }
         """)
 
-
 class CommentInput(QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -81,10 +74,12 @@ class CommentInput(QTextEdit):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Return and not event.modifiers():
-            self.parent.add_comment()  # Call parent's add_comment method
+            if hasattr(self.parent, 'add_comment'):
+                self.parent.add_comment()  # Call parent's add_comment method
+            else:
+                super().keyPressEvent(event)  # Handle other keys normally
         else:
             super().keyPressEvent(event)  # Handle other keys normally
-
 
 class GraphCanvas(FigureCanvas):
     def __init__(self, calculator: GraphingCalculator):
@@ -110,8 +105,6 @@ class GraphCanvas(FigureCanvas):
         sidebar_layout.setContentsMargins(20, 20, 20, 20)
         sidebar_layout.setSpacing(20)
 
-
-
         # Create main layout
         self.main_layout = QHBoxLayout()
         fig = Figure(figsize=(8, 6), dpi=100)
@@ -126,11 +119,9 @@ class GraphCanvas(FigureCanvas):
         self.axes.spines['left'].set_color('#666666')
         self.axes.tick_params(axis='x', colors='#666666')
         self.axes.tick_params(axis='y', colors='#666666')
-        # Add these to the __init__ after creating the main layout
 
         self.scale_type = QComboBox()
         self.scale_type.addItems(['Radians', 'Degrees'])
-
 
 class MainWindow(QMainWindow):
     def __init__(self, calculator: GraphingCalculator):
@@ -139,7 +130,7 @@ class MainWindow(QMainWindow):
         self.current_user = None
         self.history_list = QListWidget()
         self.graph_data = {}
-        self.student_graph_data = {}
+        self.student_graph_list = {}
 
         # Main layout
         main_layout = QHBoxLayout()
@@ -175,7 +166,7 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(self.user_info)
 
         logout_btn = ModernButton("Logout")
-        logout_btn.setMinimumHeight(35)
+        logout_btn.setMinimumHeight(30)
         logout_btn.setStyleSheet("""
             QPushButton {
                 background-color: #ff5555;
@@ -337,8 +328,6 @@ class MainWindow(QMainWindow):
         self.student_controls = QWidget()
         student_layout = QVBoxLayout(self.student_controls)
         student_layout.setSpacing(10)
-
-
 
         # Student graph history
         student_history_label = QLabel("My Graph History")
@@ -537,11 +526,10 @@ class MainWindow(QMainWindow):
                 self.teacher_controls.show()
                 self.student_selector.show()
                 self.load_student_list()
-                self.student_controls.hide()
             elif user.role == 'student':
                 self.teacher_controls.hide()
                 self.student_selector.hide()
-                self.student_controls.show()
+                self.load_student_graphs()
 
                 # Ensure the student graph list is in the sidebar
                 if not self.student_graph_list.parent():
@@ -557,39 +545,54 @@ class MainWindow(QMainWindow):
 
     def load_student_graphs(self):
         """Load graphs for the logged-in student only."""
-        print("Starting load_student_graphs()")  # Debug print
-        print(f"Current user: {self.current_user}")  # Debug print
+        if not self.current_user or self.current_user.role != 'student':
+            QMessageBox.warning(self, "Error", "No student logged in or incorrect role")
+            return
 
-        self.setCursor(Qt.CursorShape.WaitCursor)
+        print(f"Loading graphs for user: {self.current_user.username}, ID: {self.current_user.id}")  # Debugging
+
         try:
-            # Fetch the student's graphs from the database
             db = AdvancedDatabase()
             graphs = db.get_user_graphs(self.current_user.id)
-            print(f"Fetched graphs from database: {graphs}")  # Debug print
 
-            # Clear existing graph list and data
+            print(f"Fetched graphs: {graphs}")  # Debugging
+
             self.student_graph_list.clear()
             self.student_graph_data = {}
 
-            # Populate the graph list with data specific to the student
             if graphs:
                 for graph in graphs:
                     graph_name = graph.get('name', 'Unnamed Graph')
                     graph_id = graph.get('id')
-                    print(f"Adding graph to list: {graph_name}")  # Debug print
 
-                    if graph_id:
-                        self.student_graph_list.addItem(graph_name)
-                        self.student_graph_data[graph_name] = graph
-                print(f"Total graphs added to list: {self.student_graph_list.count()}")  # Debug print
+                    if not graph_name or not graph_id:
+                        print(f"Invalid graph data: {graph}")  # Debugging
+                        continue
+
+                    print(f"Adding graph to UI: {graph_name}, ID: {graph_id}")  # Debugging
+
+                    self.student_graph_list.addItem(graph_name)
+                    self.student_graph_data[graph_name] = graph
             else:
-                print("No graphs found for user")  # Debug print
-                QMessageBox.information(self, "No Data", "No graphs found for your account.")
+                print("No graphs found for the user.")  # Debugging
+                QMessageBox.information(self, "Info", "No graphs found for your account.")
         except Exception as e:
-            print(f"Error in load_student_graphs: {str(e)}")  # Debug print
             QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
-        finally:
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            print(f"Error: {e}")  # Debugging
+
+    def get_user_graphs(self, user_id):
+        """Fetch graphs for a specific user."""
+        query = f"SELECT * FROM graphs WHERE user_id = {user_id}"
+        print(f"Executing database query: {query}")  # Debugging
+
+        try:
+            # Assuming self.execute_query is a method that runs a query and returns results
+            results = self.execute_query(query)
+            print(f"Query results: {results}")  # Debugging
+            return results
+        except Exception as e:
+            print(f"Database query error: {e}")  # Debugging
+            return []
 
     def load_graph_from_history(self, item):
         """Load a graph when selected from the history list."""
@@ -599,8 +602,8 @@ class MainWindow(QMainWindow):
                 graph_data = self.student_graph_data[graph_name]
 
                 # Update inputs with graph data
-                self.expr_input.setText(graph_data.get('expression1', ''))
-                self.second_expr_input.setText(graph_data.get('expression2', ''))
+                self.expr_input.setText(graph_data.get('expression', ''))
+                self.second_expr_input.setText(graph_data.get('expression2', ''))  # Optional second expression
 
                 # Update ranges if they exist in graph data
                 if 'x_min' in graph_data:
@@ -1030,24 +1033,24 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Unexpected error: {str(e)}")
 
-        def main():
-            # Create QApplication instance
-            app = QApplication(sys.argv)
+    def main(self):
+        # Create QApplication instance
+        app = QApplication(sys.argv)
 
-            # Set application style
-            app.setStyle('Fusion')
+        # Set application style
+        app.setStyle('Fusion')
 
-            # Create calculator backend
-            calculator = graphing_calculator.GraphingCalculator()
+        # Create calculator backend
+        calculator = GraphingCalculator()
 
-            # Create main window
-            window = MainWindow(calculator)
-            window.setWindowTitle("Advanced Graphing Calculator")
-            window.setMinimumSize(1200, 800)
-            window.show()
+        # Create main window
+        window = MainWindow(calculator)
+        window.setWindowTitle("Advanced Graphing Calculator")
+        window.setMinimumSize(1200, 800)
+        window.show()
 
-            # Start event loop
-            sys.exit(app.exec())
+        # Start event loop
+        sys.exit(app.exec())
 
-if __name__ == "__main__":
-    main()
+    if __name__ == "__main__":
+        main()
