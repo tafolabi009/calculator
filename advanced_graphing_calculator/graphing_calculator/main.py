@@ -7,6 +7,8 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QListWidget, QInputDialog, QFileDialog)
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import QListWidgetItem
+from scipy import special, optimize
+from sympy import sympify, lambdify
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -132,13 +134,18 @@ class MainWindow(QMainWindow):
         self.graph_data = {}
         self.student_graph_list = {}
 
+        # Set window size for standard PC displays
+        self.setMinimumSize(1200, 800)
+        self.resize(1440, 900)  # Default size for 1080p displays
+
         # Main layout
         main_layout = QHBoxLayout()
+        main_layout.setSpacing(0)
 
         # Create sidebar
         sidebar = QWidget()
-        sidebar.setMinimumWidth(400)
-        sidebar.setMaximumWidth(450)
+        sidebar.setMinimumWidth(350)
+        sidebar.setMaximumWidth(400)
         sidebar.setStyleSheet("""
             QWidget {
                 background-color: #1e1e2e;
@@ -147,7 +154,7 @@ class MainWindow(QMainWindow):
         """)
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(20, 20, 20, 20)
-        sidebar_layout.setSpacing(10)
+        sidebar_layout.setSpacing(15)
 
         # Header section
         header_widget = QWidget()
@@ -186,6 +193,37 @@ class MainWindow(QMainWindow):
         logout_btn.clicked.connect(self.handle_logout)
         header_layout.addWidget(logout_btn)
         sidebar_layout.addWidget(header_widget)
+
+        # Student Graph List Section
+        self.graph_viewer_widget = QWidget()
+        graph_viewer_layout = QVBoxLayout(self.graph_viewer_widget)
+        graph_viewer_layout.setSpacing(10)
+
+        viewer_label = QLabel("My Graphs")
+        viewer_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        graph_viewer_layout.addWidget(viewer_label)
+
+        # Graph list
+        self.graph_list = QListWidget()
+        self.graph_list.setStyleSheet("""
+            QListWidget {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                font-size: 14px;
+            }
+            QListWidget::item {
+                padding: 10px;
+            }
+            QListWidget::item:selected {
+                background-color: #4CAF50;
+            }
+        """)
+        self.graph_list.itemClicked.connect(self.load_student_graphs())
+        graph_viewer_layout.addWidget(self.graph_list)
+
+        sidebar_layout.addWidget(self.graph_viewer_widget)
 
         # Expression input group
         input_group = QWidget()
@@ -325,100 +363,29 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(controls_group)
         sidebar_layout.addWidget(input_group)
 
-        self.student_controls = QWidget()
-        student_layout = QVBoxLayout(self.student_controls)
-        student_layout.setSpacing(10)
-
-        # Teacher controls
-        self.teacher_controls = QWidget()
-        teacher_layout = QVBoxLayout(self.teacher_controls)
-        teacher_layout.setSpacing(15)
-
-        teacher_label = QLabel("Teacher Controls")
-        teacher_label.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
-        teacher_layout.addWidget(teacher_label)
-
-        # Student selector
-        self.student_selector = QComboBox()
-        self.student_selector.setMinimumHeight(35)
-        self.student_selector.setEditable(True)
-        self.student_selector.setStyleSheet("""
-            QComboBox {
-                background-color: #2d2d2d;
-                border: 2px solid #3d3d3d;
-                border-radius: 6px;
-                color: white;
-                padding: 8px;
-                font-size: 14px;
-            }
-            QComboBox QLineEdit {
-                color: white;
-                padding: 5px;
-            }
-        """)
-        self.student_selector.currentIndexChanged.connect(self.load_selected_student_graphs)
-        teacher_layout.addWidget(self.student_selector)
-
-        # Student graph history
-        student_history_label = QLabel("Student Graph History")
-        student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        teacher_layout.addWidget(student_history_label)
-
-        self.student_graph_list = QListWidget()
-        self.student_graph_list.setMinimumHeight(50)
-        self.student_graph_list.setStyleSheet("""
-            QListWidget {
-                background-color: #2d2d2d;
-                border: 2px solid #3d3d3d;
-                border-radius: 6px;
-                color: white;
-                font-size: 9px;
-            }
-            QListWidget::item {
-                padding: 10px;
-            }
-            QListWidget::item:selected {
-                background-color: #4CAF50;
-            }
-        """)
-        self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
-        teacher_layout.addWidget(self.student_graph_list)
-
-        # Comment section
-        comment_label = QLabel("Add Comment")
-        comment_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        teacher_layout.addWidget(comment_label)
-
-        self.comment_input = CommentInput(self)
-        self.comment_input.setMinimumHeight(60)
-        self.comment_input.setPlaceholderText("Write a comment... (Press Enter to submit)")
-        self.comment_input.setStyleSheet("""
-            QTextEdit {
-                background-color: #2d2d2d;
-                border: 2px solid #3d3d3d;
-                border-radius: 6px;
-                color: white;
-                padding: 10px;
-                font-size: 14px;
-            }
-        """)
-        teacher_layout.addWidget(self.comment_input)
-
-        sidebar_layout.addWidget(self.teacher_controls)
-        self.teacher_controls.hide()  # Initially hidden
-
         # Main content area
         content = QWidget()
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(20, 20, 20, 20)
         content_layout.setSpacing(20)
 
-        # Graph canvas
+        # Graph canvas with scroll area
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+        """)
+
         canvas_container = QWidget()
         canvas_layout = QVBoxLayout(canvas_container)
         self.canvas = GraphCanvas(self.calculator)
+        self.canvas.setMinimumSize(800, 600)
         canvas_layout.addWidget(self.canvas)
-        content_layout.addWidget(canvas_container)
+        scroll_area.setWidget(canvas_container)
+        content_layout.addWidget(scroll_area, stretch=1)
 
         # Action buttons
         buttons_container = QWidget()
@@ -433,10 +400,6 @@ class MainWindow(QMainWindow):
         plot_btn = ModernButton("Plot Graph")
         plot_btn.clicked.connect(self.plot_graph)
         left_layout.addWidget(plot_btn)
-
-        load_graphs_btn = ModernButton("Load Graphs")
-        load_graphs_btn.clicked.connect(self.load_graphs)
-        left_layout.addWidget(load_graphs_btn)
 
         clear_btn = ModernButton("Clear")
         clear_btn.clicked.connect(self.clear_graph)
@@ -478,7 +441,7 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.comments_list)
 
         main_layout.addWidget(sidebar)
-        main_layout.addWidget(content)
+        main_layout.addWidget(content, stretch=1)
 
         # Set central widget
         central_widget = QWidget()
@@ -487,6 +450,9 @@ class MainWindow(QMainWindow):
 
         # Apply dark theme
         self.setPalette(DarkPalette())
+
+        # Load initial graphs
+        self.load_user_graphs()
 
     def set_user(self, user: User):
         """Set the current user and update the UI."""
@@ -671,7 +637,6 @@ class MainWindow(QMainWindow):
             self.auth_window = AuthWindow()
             self.auth_window.login_successful.connect(self.set_user)
             self.auth_window.show()
-            self.loop()
             self.close()
 
         except Exception as e:
