@@ -913,9 +913,8 @@ class MainWindow(QMainWindow):
                 'variable': self.var_selector.currentText(),
                 'x_min': self.min_value.value(),
                 'x_max': self.max_value.value(),
-                # If you add separate controls for y, include:
-                # 'y_min': self.y_min.value(),
-                # 'y_max': self.y_max.value(),
+                 'y_min': self.min_value.value(),
+                 'y_max': self.max_value.value(),
                 'scale_type': self.scale_type.currentText().lower()
             }
 
