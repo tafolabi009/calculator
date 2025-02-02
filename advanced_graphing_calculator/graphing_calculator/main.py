@@ -93,21 +93,6 @@ class GraphCanvas(FigureCanvas):
         # Create main layout first
         main_layout = QHBoxLayout()
 
-        # Create sidebar
-        sidebar = QWidget()
-        sidebar.setMinimumWidth(350)
-        sidebar.setMaximumWidth(400)
-        sidebar.setStyleSheet("""
-            QWidget {
-                background-color: #1e1e2e;
-                border-right: 1px solid #333340;
-            }
-        """)
-        sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(20, 20, 20, 20)
-        sidebar_layout.setSpacing(20)
-
-
         # Create main layout
         self.main_layout = QHBoxLayout()
         fig = Figure(figsize=(8, 6), dpi=100)
@@ -169,11 +154,11 @@ class MainWindow(QMainWindow):
 
         # Create sidebar
         sidebar = QWidget()
-        sidebar.setMinimumWidth(350)
-        sidebar.setMaximumWidth(400)
+        sidebar.setMinimumWidth(5)
+        sidebar.setMaximumWidth(10)
         sidebar.setStyleSheet("""
             QWidget {
-                background-color: #1e1e2e;
+                background-color: #2d2d2d;
                 border-right: 1px solid #333340;
             }
         """)
