@@ -300,8 +300,8 @@ class MainWindow(QMainWindow):
                 color: white;
                 border: 2px solid #3d3d3d;
                 border-radius: 4px;
-                padding: 5px;
-                min-width: 80px;
+                padding: 2px;
+                min-width: 20px;
             }
             QDoubleSpinBox:hover {
                 border-color: #4d4d4d;
@@ -341,10 +341,10 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(controls_group)
 
                 # Add spacing and margins
-        controls_layout.setContentsMargins(10, 10, 10, 10)
-        controls_layout.setSpacing(10)
-        var_selector_layout.setSpacing(10)
-        range_layout.setSpacing(10)
+        controls_layout.setContentsMargins(3, 3, 3, 3)
+        controls_layout.setSpacing(3)
+        var_selector_layout.setSpacing(3)
+        range_layout.setSpacing(3)
 
         # Student graph history
         student_history_label = QLabel("My Graph History")
@@ -362,7 +362,7 @@ class MainWindow(QMainWindow):
                                 font-size: 9px;
                             }
                             QListWidget::item {
-                                padding: 14px;
+                                padding: 9px;
                             }
                             QListWidget::item:selected {
                                 background-color: #4CAF50;
@@ -374,12 +374,12 @@ class MainWindow(QMainWindow):
 
         self.student_controls = QWidget()
         student_layout = QVBoxLayout(self.student_controls)
-        student_layout.setSpacing(10)
+        student_layout.setSpacing(5)
 
         # Teacher controls
         self.teacher_controls = QWidget()
         teacher_layout = QVBoxLayout(self.teacher_controls)
-        teacher_layout.setSpacing(15)
+        teacher_layout.setSpacing(10)
 
         teacher_label = QLabel("Teacher Controls")
         teacher_label.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
@@ -387,7 +387,7 @@ class MainWindow(QMainWindow):
 
         # Student selector
         self.student_selector = QComboBox()
-        self.student_selector.setMinimumHeight(35)
+        self.student_selector.setMinimumHeight(30)
         self.student_selector.setEditable(True)
         self.student_selector.setStyleSheet("""
             QComboBox {
