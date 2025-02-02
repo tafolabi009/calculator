@@ -7,8 +7,6 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QListWidget, QInputDialog, QFileDialog)
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import QListWidgetItem
-from scipy import special, optimize
-from sympy import sympify, lambdify
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -134,18 +132,13 @@ class MainWindow(QMainWindow):
         self.graph_data = {}
         self.student_graph_list = {}
 
-        # Set window size for standard PC displays
-        self.setMinimumSize(1200, 800)
-        self.resize(1440, 900)  # Default size for 1080p displays
-
         # Main layout
         main_layout = QHBoxLayout()
-        main_layout.setSpacing(0)
 
         # Create sidebar
         sidebar = QWidget()
-        sidebar.setMinimumWidth(350)
-        sidebar.setMaximumWidth(400)
+        sidebar.setMinimumWidth(400)
+        sidebar.setMaximumWidth(450)
         sidebar.setStyleSheet("""
             QWidget {
                 background-color: #1e1e2e;
@@ -154,7 +147,7 @@ class MainWindow(QMainWindow):
         """)
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(20, 20, 20, 20)
-        sidebar_layout.setSpacing(15)
+        sidebar_layout.setSpacing(10)
 
         # Header section
         header_widget = QWidget()
@@ -193,37 +186,6 @@ class MainWindow(QMainWindow):
         logout_btn.clicked.connect(self.handle_logout)
         header_layout.addWidget(logout_btn)
         sidebar_layout.addWidget(header_widget)
-
-        # Student Graph List Section
-        self.graph_viewer_widget = QWidget()
-        graph_viewer_layout = QVBoxLayout(self.graph_viewer_widget)
-        graph_viewer_layout.setSpacing(10)
-
-        viewer_label = QLabel("My Graphs")
-        viewer_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        graph_viewer_layout.addWidget(viewer_label)
-
-        # Graph list
-        self.graph_list = QListWidget()
-        self.graph_list.setStyleSheet("""
-            QListWidget {
-                background-color: #2d2d2d;
-                border: 2px solid #3d3d3d;
-                border-radius: 6px;
-                color: white;
-                font-size: 14px;
-            }
-            QListWidget::item {
-                padding: 10px;
-            }
-            QListWidget::item:selected {
-                background-color: #4CAF50;
-            }
-        """)
-        self.graph_list.itemClicked.connect(self.load_student_graphs())
-        graph_viewer_layout.addWidget(self.graph_list)
-
-        sidebar_layout.addWidget(self.graph_viewer_widget)
 
         # Expression input group
         input_group = QWidget()
@@ -363,29 +325,126 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(controls_group)
         sidebar_layout.addWidget(input_group)
 
+        # Student graph history
+        student_history_label = QLabel("My Graph History")
+        student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        sidebar_layout.addWidget(student_history_label)
+
+        self.student_graph_list = QListWidget()
+        self.student_graph_list.setMinimumHeight(50)
+        self.student_graph_list.setStyleSheet("""
+                            QListWidget {
+                                background-color: #2d2d2d;
+                                border: 2px solid #3d3d3d;
+                                border-radius: 6px;
+                                color: white;
+                                font-size: 9px;
+                            }
+                            QListWidget::item {
+                                padding: 14px;
+                            }
+                            QListWidget::item:selected {
+                                background-color: #4CAF50;
+                            }
+                        """)
+        self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
+        sidebar_layout.addWidget(self.student_graph_list)
+        self.load_student_graphs()
+
+        self.student_controls = QWidget()
+        student_layout = QVBoxLayout(self.student_controls)
+        student_layout.setSpacing(10)
+
+        # Teacher controls
+        self.teacher_controls = QWidget()
+        teacher_layout = QVBoxLayout(self.teacher_controls)
+        teacher_layout.setSpacing(15)
+
+        teacher_label = QLabel("Teacher Controls")
+        teacher_label.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
+        teacher_layout.addWidget(teacher_label)
+
+        # Student selector
+        self.student_selector = QComboBox()
+        self.student_selector.setMinimumHeight(35)
+        self.student_selector.setEditable(True)
+        self.student_selector.setStyleSheet("""
+            QComboBox {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                padding: 8px;
+                font-size: 14px;
+            }
+            QComboBox QLineEdit {
+                color: white;
+                padding: 5px;
+            }
+        """)
+        self.student_selector.currentIndexChanged.connect(self.load_selected_student_graphs)
+        teacher_layout.addWidget(self.student_selector)
+
+        # Student graph history
+        student_history_label = QLabel("Student Graph History")
+        student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        teacher_layout.addWidget(student_history_label)
+
+        self.student_graph_list = QListWidget()
+        self.student_graph_list.setMinimumHeight(50)
+        self.student_graph_list.setStyleSheet("""
+            QListWidget {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                font-size: 9px;
+            }
+            QListWidget::item {
+                padding: 10px;
+            }
+            QListWidget::item:selected {
+                background-color: #4CAF50;
+            }
+        """)
+        self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
+        teacher_layout.addWidget(self.student_graph_list)
+
+        # Comment section
+        comment_label = QLabel("Add Comment")
+        comment_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        teacher_layout.addWidget(comment_label)
+
+        self.comment_input = CommentInput(self)
+        self.comment_input.setMinimumHeight(60)
+        self.comment_input.setPlaceholderText("Write a comment... (Press Enter to submit)")
+        self.comment_input.setStyleSheet("""
+            QTextEdit {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                padding: 10px;
+                font-size: 14px;
+            }
+        """)
+        teacher_layout.addWidget(self.comment_input)
+
+        sidebar_layout.addWidget(self.teacher_controls)
+        self.teacher_controls.hide()  # Initially hidden
+
         # Main content area
         content = QWidget()
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(20, 20, 20, 20)
         content_layout.setSpacing(20)
 
-        # Graph canvas with scroll area
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("""
-            QScrollArea {
-                border: none;
-                background-color: transparent;
-            }
-        """)
-
+        # Graph canvas
         canvas_container = QWidget()
         canvas_layout = QVBoxLayout(canvas_container)
         self.canvas = GraphCanvas(self.calculator)
-        self.canvas.setMinimumSize(800, 600)
         canvas_layout.addWidget(self.canvas)
-        scroll_area.setWidget(canvas_container)
-        content_layout.addWidget(scroll_area, stretch=1)
+        content_layout.addWidget(canvas_container)
 
         # Action buttons
         buttons_container = QWidget()
@@ -400,6 +459,10 @@ class MainWindow(QMainWindow):
         plot_btn = ModernButton("Plot Graph")
         plot_btn.clicked.connect(self.plot_graph)
         left_layout.addWidget(plot_btn)
+
+        load_graphs_btn = ModernButton("Load Graphs")
+        load_graphs_btn.clicked.connect(self.load_graphs)
+        left_layout.addWidget(load_graphs_btn)
 
         clear_btn = ModernButton("Clear")
         clear_btn.clicked.connect(self.clear_graph)
@@ -441,7 +504,7 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.comments_list)
 
         main_layout.addWidget(sidebar)
-        main_layout.addWidget(content, stretch=1)
+        main_layout.addWidget(content)
 
         # Set central widget
         central_widget = QWidget()
@@ -450,9 +513,6 @@ class MainWindow(QMainWindow):
 
         # Apply dark theme
         self.setPalette(DarkPalette())
-
-        # Load initial graphs
-        self.load_user_graphs()
 
     def set_user(self, user: User):
         """Set the current user and update the UI."""
@@ -901,7 +961,7 @@ class MainWindow(QMainWindow):
         try:
             # Clear the plot
             self.canvas.axes.clear()
-            self.canvas.axes.grid(True, color='#666666', linestyle='--', alpha=0.5)
+            self.canvas.axes.grid(True, color='#666666')
 
             # Get input values
             expression = self.expr_input.text().strip()
@@ -915,154 +975,23 @@ class MainWindow(QMainWindow):
             y_max = self.y_max.value()
             scale_type = self.scale_type.currentText().lower()
 
-            # Generate x values based on scale type
-            if scale_type == 'log':
-                x_min = max(1e-10, x_min)  # Prevent log(0) errors
-                x_values = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
-                self.canvas.axes.set_xscale('log')
-            else:
-                x_values = np.linspace(x_min, x_max, 1000)
+            # Generate x values
+            x_values = np.linspace(x_min, x_max, 1000)
+            y_values = np.vectorize(
+                lambda x: self.calculator.evaluate_expression(expression, x, scale_type)
+            )(x_values)
 
-            def advanced_eval(x, expr):
-                try:
-                    # Advanced mathematical functions dictionary
-                    math_funcs = {
-                        # Basic functions
-                        'ln': np.log,
-                        'log': np.log10,
-                        'sin': np.sin,
-                        'cos': np.cos,
-                        'tan': np.tan,
-                        'sqrt': np.sqrt,
-                        'exp': np.exp,
-                        'abs': np.abs,
+            # Plot the graph
+            self.canvas.axes.plot(x_values, y_values, label='Graph')
 
-                        # Advanced functions
-                        'sinh': np.sinh,
-                        'cosh': np.cosh,
-                        'tanh': np.tanh,
-                        'asin': np.arcsin,
-                        'acos': np.arccos,
-                        'atan': np.arctan,
-                        'sec': lambda x: 1 / np.cos(x),
-                        'csc': lambda x: 1 / np.sin(x),
-                        'cot': lambda x: 1 / np.tan(x),
-
-                        # Special functions
-                        'gamma': special.gamma,
-                        'erf': special.erf,
-                        'erfc': special.erfc,
-                        'beta': special.beta,
-                        'factorial': special.factorial,
-
-                        # Constants
-                        'pi': np.pi,
-                        'e': np.e,
-                        'inf': np.inf,
-                        'golden': (1 + np.sqrt(5)) / 2
-                    }
-
-                    # Handle piecewise functions
-                    if 'piecewise' in expr.lower():
-                        return eval_piecewise(x, expr, math_funcs)
-
-                    # Handle lambda functions
-                    if 'lambda' in expr.lower():
-                        return eval_lambda(x, expr, math_funcs)
-
-                    # Handle quadratic and polynomial equations
-                    if 'quad(' in expr.lower():
-                        return eval_quadratic(x, expr)
-
-                    # Convert expression to SymPy format for symbolic computation
-                    expr = sympify(expr)
-                    f = lambdify('x', expr, modules=['numpy', math_funcs])
-                    return f(x)
-
-                except Exception as e:
-                    raise ValueError(f"Error evaluating expression: {str(e)}")
-
-            def eval_piecewise(x, expr, math_funcs):
-                """Evaluate piecewise functions"""
-                # Example format: piecewise(x < 0: -x, x >= 0: x^2)
-                try:
-                    conditions = expr.split('piecewise(')[1].strip(')').split(',')
-                    for condition in conditions:
-                        cond, func = condition.split(':')
-                        if eval(cond, {"__builtins__": {}}, {"x": x, **math_funcs}):
-                            return eval(func, {"__builtins__": {}}, {"x": x, **math_funcs})
-                    return np.nan
-                except Exception as e:
-                    raise ValueError(f"Invalid piecewise function format: {str(e)}")
-
-            def eval_lambda(x, expr, math_funcs):
-                """Evaluate lambda functions"""
-                # Example format: lambda x: x^2 + 2*x + 1
-                try:
-                    func_body = expr.split('lambda x:')[1].strip()
-                    return eval(func_body, {"__builtins__": {}}, {"x": x, **math_funcs})
-                except Exception as e:
-                    raise ValueError(f"Invalid lambda function format: {str(e)}")
-
-            def eval_quadratic(x, expr):
-                """Evaluate quadratic equations"""
-                # Example format: quad(a,b,c) for ax^2 + bx + c
-                try:
-                    params = expr.split('quad(')[1].strip(')').split(',')
-                    a, b, c = map(float, params)
-                    return a * x ** 2 + b * x + c
-                except Exception as e:
-                    raise ValueError(f"Invalid quadratic equation format: {str(e)}")
-
-            # Calculate y values with vectorization and error handling
-            y_values = np.vectorize(lambda x: advanced_eval(x, expression))(x_values)
-
-            # Handle complex numbers
-            if np.iscomplexobj(y_values):
-                # Plot real and imaginary parts separately
-                self.canvas.axes.plot(x_values, y_values.real,
-                                      label=f"Re({expression})",
-                                      linewidth=2,
-                                      color='#1f77b4')
-                self.canvas.axes.plot(x_values, y_values.imag,
-                                      label=f"Im({expression})",
-                                      linewidth=2,
-                                      linestyle='--',
-                                      color='#ff7f0e')
-            else:
-                # Handle infinities and NaN values
-                mask = np.isfinite(y_values)
-                x_values = x_values[mask]
-                y_values = y_values[mask]
-
-                # Plot regular function
-                self.canvas.axes.plot(x_values, y_values,
-                                      label=expression,
-                                      linewidth=2,
-                                      color='#1f77b4')
-
-            # Set axis scales and limits
-            if self.y_scale_type.currentText().lower() == 'log':
-                self.canvas.axes.set_yscale('log')
-            self.canvas.axes.set_ylim(y_min, y_max)
+            # Set axis limits
             self.canvas.axes.set_xlim(x_min, x_max)
+            self.canvas.axes.set_ylim(y_min, y_max)
 
-            # Enhance graph appearance
-            self.canvas.axes.set_xlabel("x", fontsize=10)
-            self.canvas.axes.set_ylabel("y", fontsize=10)
-            self.canvas.axes.legend(fontsize=10)
-            self.canvas.axes.spines['top'].set_visible(False)
-            self.canvas.axes.spines['right'].set_visible(False)
-            self.canvas.axes.set_title(f"Graph of {expression}", pad=10)
-
-            # Add coordinate axes
-            if x_min <= 0 <= x_max:
-                self.canvas.axes.axvline(x=0, color='k', linestyle='-', alpha=0.3)
-            if y_min <= 0 <= y_max:
-                self.canvas.axes.axhline(y=0, color='k', linestyle='-', alpha=0.3)
-
-            # Add grid for better readability
-            self.canvas.axes.grid(True, which='both', linestyle='--', alpha=0.3)
+            # Add labels and legend
+            self.canvas.axes.set_xlabel("x")
+            self.canvas.axes.set_ylabel("y")
+            self.canvas.axes.legend()
 
             # Refresh the canvas
             self.canvas.draw()
