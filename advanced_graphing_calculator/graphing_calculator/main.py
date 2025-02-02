@@ -342,37 +342,16 @@ class MainWindow(QMainWindow):
         # Add controls_group to sidebar_layout
         sidebar_layout.addWidget(controls_group)
 
-                # Add spacing and margins
+        # Add student graph history to sidebar
+        history_label, graph_list = self.setup_student_graph_history()
+        sidebar_layout.addWidget(history_label)
+        sidebar_layout.addWidget(graph_list)
+
+        # Add spacing and margins
         controls_layout.setContentsMargins(3, 3, 3, 3)
         controls_layout.setSpacing(3)
         var_selector_layout.setSpacing(3)
         range_layout.setSpacing(3)
-
-        # Student graph history
-        student_history_label = QLabel("My Graph History")
-        student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        sidebar_layout.addWidget(student_history_label)
-
-        self.student_list = QListWidget()
-        self.student_list.setMinimumHeight(50)
-        self.student_list.setStyleSheet("""
-                            QListWidget {
-                                background-color: #2d2d2d;
-                                border: 2px solid #3d3d3d;
-                                border-radius: 6px;
-                                color: white;
-                                font-size: 9px;
-                            }
-                            QListWidget::item {
-                                padding: 9px;
-                            }
-                            QListWidget::item:selected {
-                                background-color: #4CAF50;
-                            }
-                        """)
-        self.student_list.itemClicked.connect(self.load_graph_from_history)
-        self.load_student_graphs()
-        sidebar_layout.addWidget(self.student_list)
 
         self.student_controls = QWidget()
         student_layout = QVBoxLayout(self.student_controls)
@@ -563,42 +542,127 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error setting user: {str(e)}")
 
-    def load_student_graphs(self):
-        """Load graphs for the logged-in student only."""
-        if not self.current_user or self.current_user.role != 'student':
-            QMessageBox.warning(self, "Error", "No student logged in or incorrect role")
-            return
+    def setup_student_graph_history(self):
+        """Set up the student graph history section"""
+        # Create and style the history label
+        history_label = QLabel("My Graph History")
+        history_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-size: 12px;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+        """)
 
-        print(f"Loading graphs for user: {self.current_user.username}, ID: {self.current_user.id}")  # Debugging
+        # Create and configure the list widget
+        self.student_graph_list = QListWidget()
+        self.student_graph_list.setMinimumHeight(30)
+        self.student_graph_list.setStyleSheet("""
+            QListWidget {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                font-size: 12px;
+            }
+            QListWidget::item {
+                padding: 8px;
+                border-bottom: 1px solid #3d3d3d;
+            }
+            QListWidget::item:selected {
+                background-color: #2a82da;
+            }
+            QListWidget::item:hover {
+                background-color: #353535;
+            }
+        """)
+
+        # Connect signals
+        self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
+        self.student_graph_list.itemSelectionChanged.connect(self.on_graph_selection_changed)
+
+        return history_label, self.student_graph_list
+
+    def load_student_graphs(self):
+        """Load graphs for the logged-in student."""
+        if not self.current_user:
+            return
 
         try:
             db = AdvancedDatabase()
             graphs = db.get_user_graphs(self.current_user.id)
 
-            print(f"Fetched graphs: {graphs}")  # Debugging
-
             self.student_graph_list.clear()
             self.student_graph_data = {}
 
             if graphs:
-                for graph in graphs:
-                    graph_name = graph.get('name', 'Unnamed Graph')
-                    graph_id = graph.get('id')
+                # Sort graphs by creation date (newest first)
+                sorted_graphs = sorted(
+                    graphs,
+                    key=lambda x: x.get('created_at', ''),
+                    reverse=True
+                )
 
-                    if not graph_name or not graph_id:
-                        print(f"Invalid graph data: {graph}")  # Debugging
-                        continue
+                for graph in sorted_graphs:
+                    name = graph.get('name', 'Unnamed Graph')
+                    created_at = graph.get('created_at', 'No date')
 
-                    print(f"Adding graph to UI: {graph_name}, ID: {graph_id}")  # Debugging
+                    # Create display text
+                    display_text = f"{name} ({created_at})"
 
-                    self.student_graph_list.addItem(graph_name)
-                    self.student_graph_data[graph_name] = graph
+                    # Create and configure list item
+                    item = QListWidgetItem(display_text)
+                    item.setData(Qt.ItemDataRole.UserRole, graph)  # Store full graph data
+
+                    # Add item to list
+                    self.student_graph_list.addItem(item)
+                    self.student_graph_data[name] = graph
+
+                # Select the most recent graph
+                self.student_graph_list.setCurrentRow(0)
             else:
-                print("No graphs found for the user.")  # Debugging
-                QMessageBox.information(self, "Info", "No graphs found for your account.")
+                # Add placeholder item
+                placeholder = QListWidgetItem("No saved graphs")
+                placeholder.setFlags(placeholder.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+                self.student_graph_list.addItem(placeholder)
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
-            print(f"Error: {e}")  # Debugging
+            logging.error(f"Error loading student graphs: {str(e)}")
+
+    def on_graph_selection_changed(self):
+        """Handle graph selection changes"""
+        try:
+            selected_items = self.student_graph_list.selectedItems()
+            if selected_items:
+                item = selected_items[0]
+                graph_name = item.text().split(' (')[0]  # Extract name from display text
+
+                # Update comments for selected graph
+                self.update_comments(graph_name)
+
+                # Load graph data
+                if graph_name in self.student_graph_data:
+                    graph_data = self.student_graph_data[graph_name]
+
+                    # Update UI with graph data
+                    self.expr_input.setText(graph_data.get('expression', ''))
+                    self.min_value.setValue(float(graph_data.get('x_min', -10)))
+                    self.max_value.setValue(float(graph_data.get('x_max', 10)))
+
+                    # Update scale type if present
+                    scale_type = graph_data.get('scale_type', 'linear').capitalize()
+                    index = self.scale_type.findText(scale_type)
+                    if index >= 0:
+                        self.scale_type.setCurrentIndex(index)
+
+                    # Plot the graph
+                    self.plot_graph()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error selecting graph: {str(e)}")
+            logging.error(f"Error in graph selection: {str(e)}")
 
     def get_user_graphs(self, user_id):
         """Fetch graphs for a specific user."""
@@ -728,25 +792,38 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error updating history: {str(e)}")
 
-    def update_comments(self, graph_id):
+    def update_comments(self, graph_name):
         """Update the comments list for the selected graph."""
-        if not graph_id:
-            QMessageBox.warning(self, "Error", "Graph ID is missing.")
-            return
-
         try:
+            if not graph_name or graph_name not in self.student_graph_data:
+                return
+
+            graph_data = self.student_graph_data[graph_name]
+            graph_id = graph_data.get('id')
+
+            if not graph_id:
+                return
+
             db = AdvancedDatabase()
             comments = db.get_graph_comments(graph_id)
 
             self.comments_list.clear()
+
             if comments:
                 for comment in comments:
-                    item_text = f"{comment['teacher_name']} ({comment['timestamp']}): {comment['comment']}"
-                    self.comments_list.addItem(item_text)
+                    # Format timestamp if it exists
+                    timestamp = comment.get('timestamp', 'No date')
+                    teacher_name = comment.get('teacher_name', 'Unknown')
+                    comment_text = comment.get('comment', '')
+
+                    item_text = f"{teacher_name} ({timestamp}): {comment_text}"
+                    self.comments_list.addItem(QListWidgetItem(item_text))
             else:
-                QMessageBox.information(self, "No Comments", "No comments found for this graph.")
+                self.comments_list.addItem(QListWidgetItem("No comments yet"))
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading comments: {str(e)}")
+            logging.error(f"Error updating comments: {str(e)}")
 
     def clear_graph(self):
         """Clear the current graph from the canvas."""
