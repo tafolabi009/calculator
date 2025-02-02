@@ -4,7 +4,7 @@ from PyQt6.QtGui import QPalette, QColor
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
                              QDoubleSpinBox, QTextEdit, QMessageBox, QGridLayout,
-                             QListWidget, QInputDialog, QFileDialog)
+                             QListWidget, QInputDialog, QFileDialog, QFrame)
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import QListWidgetItem
 from scipy import special, optimize
@@ -337,12 +337,6 @@ class MainWindow(QMainWindow):
         var_selector_layout.setSpacing(10)
         range_layout.setSpacing(10)
 
-        # Optional: Add a separator line
-        separator = QFrame()
-        separator.setFrameShape(QFrame.HLine)
-        separator.setFrameShadow(QFrame.Sunken)
-        separator.setStyleSheet("background-color: #3d3d3d;")
-        controls_layout.addWidget(separator)
 
         # Student graph history
         student_history_label = QLabel("My Graph History")
