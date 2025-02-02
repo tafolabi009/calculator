@@ -130,6 +130,23 @@ class MainWindow(QMainWindow):
     def __init__(self, calculator: GraphingCalculator):
         self.auth_window = None
         super().__init__()
+        # Calculate center position
+        screen = QApplication.primaryScreen().geometry()
+        window_size = QSize(1200, 800)  # Default size
+
+        # Ensure window fits within screen bounds
+        if window_size.width() > screen.width():
+            window_size.setWidth(screen.width() * 0.9)  # 90% of screen width
+        if window_size.height() > screen.height():
+            window_size.setHeight(screen.height() * 0.9)  # 90% of screen height
+
+        # Calculate center position
+        x = (screen.width() - window_size.width()) // 2
+        y = (screen.height() - window_size.height()) // 2
+
+        # Set geometry
+        self.setGeometry(x, y, window_size.width(), window_size.height())
+
         self.calculator = calculator
         self.current_user = None
         self.history_list = QListWidget()
