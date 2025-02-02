@@ -128,7 +128,7 @@ class GraphCanvas(FigureCanvas):
 class MainWindow(QMainWindow):
     def __init__(self, calculator: GraphingCalculator):
         self.auth_window = None
-        global var_label, scale_label, range_group, controls_layout
+        global var_label, scale_label, range_group, controls_layout, sidebar_layout, var_selector_layout
         super().__init__()
         self.calculator = calculator
         self.current_user = None
@@ -243,8 +243,8 @@ class MainWindow(QMainWindow):
         controls_layout = QVBoxLayout(controls_group)
 
         # Variable selector
-        var_selector_group = QWidget()
-        var_selector_group.setLayout(self.var_selector_layout)
+        var_selector_layout = QWidget()
+        var_selector_layout.setLayout(self.var_selector_layout)
 
         # Variable selector with enhanced styling
         var_label = QLabel("Variable:")
