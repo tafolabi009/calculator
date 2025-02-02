@@ -346,6 +346,8 @@ class MainWindow(QMainWindow):
         history_label, graph_list = self.setup_student_graph_history()
         sidebar_layout.addWidget(history_label)
         sidebar_layout.addWidget(graph_list)
+        self.student_graph_list.itemSelectionChanged.connect(self.on_graph_selection_changed)
+        self.history_list.itemSelectionChanged.connect(self.on_graph_selection_changed)
 
         # Add spacing and margins
         controls_layout.setContentsMargins(3, 3, 3, 3)
@@ -585,7 +587,7 @@ class MainWindow(QMainWindow):
         return history_label, self.student_graph_list
 
     def load_student_graphs(self):
-        """Load graphs for the logged-in student."""
+        """Load graphs for the logged-in student and update the UI."""
         if not self.current_user:
             return
 
@@ -593,8 +595,10 @@ class MainWindow(QMainWindow):
             db = AdvancedDatabase()
             graphs = db.get_user_graphs(self.current_user.id)
 
+            # Clear existing lists
             self.student_graph_list.clear()
-            self.student_graph_data = {}
+            self.student_graph_data.clear()
+            self.history_list.clear()
 
             if graphs:
                 # Sort graphs by creation date (newest first)
@@ -605,64 +609,58 @@ class MainWindow(QMainWindow):
                 )
 
                 for graph in sorted_graphs:
-                    name = graph.get('name', 'Unnamed Graph')
+                    graph_name = graph.get('name', 'Unnamed Graph')
                     created_at = graph.get('created_at', 'No date')
 
                     # Create display text
-                    display_text = f"{name} ({created_at})"
+                    display_text = f"{graph_name} ({created_at})"
 
-                    # Create and configure list item
+                    # Add to student graph list
                     item = QListWidgetItem(display_text)
-                    item.setData(Qt.ItemDataRole.UserRole, graph)  # Store full graph data
-
-                    # Add item to list
                     self.student_graph_list.addItem(item)
-                    self.student_graph_data[name] = graph
 
-                # Select the most recent graph
+                    # Add to history list
+                    self.history_list.addItem(display_text)
+
+                    # Store graph data
+                    self.student_graph_data[graph_name] = graph
+                    self.graph_data[graph_name] = graph
+
+                # Select the first graph
                 self.student_graph_list.setCurrentRow(0)
+                # Update comments for the first graph
+                if sorted_graphs:
+                    self.update_comments(sorted_graphs[0]['id'])
             else:
-                # Add placeholder item
                 placeholder = QListWidgetItem("No saved graphs")
-                placeholder.setFlags(placeholder.flags() & ~Qt.ItemFlag.ItemIsEnabled)
                 self.student_graph_list.addItem(placeholder)
+                self.history_list.addItem("No saved graphs")
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
             logging.error(f"Error loading student graphs: {str(e)}")
 
     def on_graph_selection_changed(self):
-        """Handle graph selection changes"""
+        """Handle selection changes in the graph lists."""
         try:
+            # Get the selected item from whichever list was changed
             selected_items = self.student_graph_list.selectedItems()
+            if not selected_items:
+                selected_items = self.history_list.selectedItems()
+
             if selected_items:
                 item = selected_items[0]
-                graph_name = item.text().split(' (')[0]  # Extract name from display text
+                graph_name = item.text().split(' (')[0]
 
-                # Update comments for selected graph
-                self.update_comments(graph_name)
-
-                # Load graph data
                 if graph_name in self.student_graph_data:
                     graph_data = self.student_graph_data[graph_name]
+                    graph_id = graph_data.get('id')
 
-                    # Update UI with graph data
-                    self.expr_input.setText(graph_data.get('expression', ''))
-                    self.min_value.setValue(float(graph_data.get('x_min', -10)))
-                    self.max_value.setValue(float(graph_data.get('x_max', 10)))
-
-                    # Update scale type if present
-                    scale_type = graph_data.get('scale_type', 'linear').capitalize()
-                    index = self.scale_type.findText(scale_type)
-                    if index >= 0:
-                        self.scale_type.setCurrentIndex(index)
-
-                    # Plot the graph
-                    self.plot_graph()
+                    if graph_id:
+                        self.update_comments(graph_id)
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error selecting graph: {str(e)}")
-            logging.error(f"Error in graph selection: {str(e)}")
+            logging.error(f"Error handling graph selection: {str(e)}")
 
     def get_user_graphs(self, user_id):
         """Fetch graphs for a specific user."""
@@ -679,26 +677,35 @@ class MainWindow(QMainWindow):
             return []
 
     def load_graph_from_history(self, item):
+        """Load a graph from history and update comments."""
         try:
-            graph_name = item.text()
+            # Get the graph name without the timestamp
+            graph_name = item.text().split(' (')[0]
+
             if graph_name in self.student_graph_data:
                 graph_data = self.student_graph_data[graph_name]
 
                 # Update expression inputs with saved graph data
                 self.expr_input.setText(graph_data.get('expression', ''))
-                self.second_expr_input.setText(graph_data.get('expression2', ''))  # Optional
+                self.second_expr_input.setText(graph_data.get('expression2', ''))
 
-                # Update the sidebar range spin boxes using the saved values
+                # Update range values
                 if 'x_min' in graph_data:
                     self.min_value.setValue(float(graph_data['x_min']))
                 if 'x_max' in graph_data:
                     self.max_value.setValue(float(graph_data['x_max']))
-                # If you later add separate y-range controls, update them here accordingly
 
-                # Plot the graph using the updated values
+                # Update comments
+                graph_id = graph_data.get('id')
+                if graph_id:
+                    self.update_comments(graph_id)
+
+                # Plot the graph
                 self.plot_graph()
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading graph: {str(e)}")
+            logging.error(f"Error loading graph from history: {str(e)}")
 
     def setup_student_view(self):
         """Set up the interface for student users."""
@@ -792,18 +799,12 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error updating history: {str(e)}")
 
-    def update_comments(self, graph_name):
+    def update_comments(self, graph_id):
         """Update the comments list for the selected graph."""
+        if not graph_id:
+            return
+
         try:
-            if not graph_name or graph_name not in self.student_graph_data:
-                return
-
-            graph_data = self.student_graph_data[graph_name]
-            graph_id = graph_data.get('id')
-
-            if not graph_id:
-                return
-
             db = AdvancedDatabase()
             comments = db.get_graph_comments(graph_id)
 
@@ -811,15 +812,30 @@ class MainWindow(QMainWindow):
 
             if comments:
                 for comment in comments:
-                    # Format timestamp if it exists
+                    # Format the comment with datetime
+                    teacher_name = comment.get('teacher_name', 'Unknown Teacher')
                     timestamp = comment.get('timestamp', 'No date')
-                    teacher_name = comment.get('teacher_name', 'Unknown')
                     comment_text = comment.get('comment', '')
 
-                    item_text = f"{teacher_name} ({timestamp}): {comment_text}"
-                    self.comments_list.addItem(QListWidgetItem(item_text))
+                    # Create formatted comment text
+                    formatted_comment = (
+                        f"{teacher_name}\n"
+                        f"Date: {timestamp}\n"
+                        f"{comment_text}\n"
+                        f"{'-' * 40}"
+                    )
+
+                    # Create and configure list item
+                    item = QListWidgetItem(formatted_comment)
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignLeft)
+
+                    # Add to comments list
+                    self.comments_list.addItem(item)
             else:
-                self.comments_list.addItem(QListWidgetItem("No comments yet"))
+                # Add placeholder when no comments exist
+                placeholder = QListWidgetItem("No comments yet")
+                placeholder.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.comments_list.addItem(placeholder)
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading comments: {str(e)}")
