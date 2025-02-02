@@ -1,12 +1,12 @@
+import sys
 import logging
 import numpy as np
 from PyQt6.QtGui import QPalette, QColor
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
                              QDoubleSpinBox, QTextEdit, QMessageBox, QGridLayout,
-                             QListWidget, QInputDialog, QFileDialog, QFrame)
+                             QListWidget, QInputDialog, QFileDialog, QFrame, QListWidgetItem)
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtWidgets import QListWidgetItem
 from scipy import special, optimize
 from sympy import sympify, lambdify
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -15,7 +15,6 @@ from matplotlib.figure import Figure
 from graphing_calculator import GraphingCalculator
 from auth_system import User
 from database import AdvancedDatabase
-
 
 class DarkPalette(QPalette):
     def __init__(self):
@@ -32,7 +31,6 @@ class DarkPalette(QPalette):
         self.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
         self.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
         self.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-
 
 class ModernButton(QPushButton):
     def __init__(self, *args, **kwargs):
@@ -54,7 +52,6 @@ class ModernButton(QPushButton):
             }
         """)
 
-
 class ModernLineEdit(QLineEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -72,7 +69,6 @@ class ModernLineEdit(QLineEdit):
             }
         """)
 
-
 class CommentInput(QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -87,7 +83,6 @@ class CommentInput(QTextEdit):
         else:
             super().keyPressEvent(event)  # Handle other keys normally
 
-
 class GraphCanvas(FigureCanvas):
     def __init__(self, calculator: GraphingCalculator):
         super().__init__()
@@ -96,7 +91,7 @@ class GraphCanvas(FigureCanvas):
         self.history_list = QListWidget()
 
         # Create main layout first
-        QHBoxLayout()
+        main_layout = QHBoxLayout()
 
         # Create sidebar
         sidebar = QWidget()
@@ -111,6 +106,7 @@ class GraphCanvas(FigureCanvas):
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(20, 20, 20, 20)
         sidebar_layout.setSpacing(20)
+
 
         # Create main layout
         self.main_layout = QHBoxLayout()
@@ -129,7 +125,6 @@ class GraphCanvas(FigureCanvas):
 
         self.scale_type = QComboBox()
         self.scale_type.addItems(['Radians', 'Degrees'])
-
 
 class MainWindow(QMainWindow):
     def __init__(self, calculator: GraphingCalculator):
@@ -152,13 +147,13 @@ class MainWindow(QMainWindow):
         self.student_graph_list = QListWidget()
         self.student_graph_data = {}  # Initialize dictionary to store graph data
 
-        # Main layout
+        # Create main layout first
         main_layout = QHBoxLayout()
 
         # Create sidebar
         sidebar = QWidget()
-        sidebar.setMinimumWidth(400)
-        sidebar.setMaximumWidth(450)
+        sidebar.setMinimumWidth(350)
+        sidebar.setMaximumWidth(400)
         sidebar.setStyleSheet("""
             QWidget {
                 background-color: #1e1e2e;
@@ -167,7 +162,14 @@ class MainWindow(QMainWindow):
         """)
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(20, 20, 20, 20)
-        sidebar_layout.setSpacing(10)
+        sidebar_layout.setSpacing(20)
+
+        # Create a widget to hold the QHBoxLayout
+        sidebar_widget = QWidget()
+        sidebar_widget.setLayout(sidebar_layout)
+
+        # Add the sidebar widget to the main layout
+        main_layout.addWidget(sidebar_widget)
 
         # Header section
         header_widget = QWidget()
@@ -217,9 +219,6 @@ class MainWindow(QMainWindow):
         input_label.setStyleSheet("color: white; font-size: 13px; font-weight: bold;")
         sidebar_layout.addWidget(input_label)
 
-        sidebar_layout.addWidget(self.expr_input)
-        sidebar_layout.addWidget(self.second_expr_input)
-
         self.expr_input = ModernLineEdit()
         self.expr_input.setMinimumHeight(35)
         self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
@@ -228,13 +227,16 @@ class MainWindow(QMainWindow):
         self.second_expr_input.setMinimumHeight(35)
         self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
 
+        sidebar_layout.addWidget(self.expr_input)
+        sidebar_layout.addWidget(self.second_expr_input)
+
         # Controls group (variable selector and ranges)
         controls_group = QWidget()
         controls_layout = QVBoxLayout(controls_group)
 
         # Variable selector
         var_selector_layout = QWidget()
-        var_selector_layout.setLayout(self.var_selector_layout)
+        var_selector_layout.setLayout(var_selector_layout)
 
         # Variable selector with enhanced styling
         var_label = QLabel("Variable:")
@@ -1123,5 +1125,5 @@ def main():
     # Start event loop
     sys.exit(app.exec())
 
-    if __name__ == "__main__":
-            main()
+if __name__ == "__main__":
+    main()
