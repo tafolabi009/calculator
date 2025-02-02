@@ -12,9 +12,10 @@ from sympy import sympify, lambdify
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-from graphing_calculator import GraphingCalculator, Graph
+from graphing_calculator import GraphingCalculator
 from auth_system import User
 from database import AdvancedDatabase
+
 
 class DarkPalette(QPalette):
     def __init__(self):
@@ -31,6 +32,7 @@ class DarkPalette(QPalette):
         self.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
         self.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
         self.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
+
 
 class ModernButton(QPushButton):
     def __init__(self, *args, **kwargs):
@@ -52,6 +54,7 @@ class ModernButton(QPushButton):
             }
         """)
 
+
 class ModernLineEdit(QLineEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -69,6 +72,7 @@ class ModernLineEdit(QLineEdit):
             }
         """)
 
+
 class CommentInput(QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -82,6 +86,7 @@ class CommentInput(QTextEdit):
                 super().keyPressEvent(event)  # Handle other keys normally
         else:
             super().keyPressEvent(event)  # Handle other keys normally
+
 
 class GraphCanvas(FigureCanvas):
     def __init__(self, calculator: GraphingCalculator):
@@ -125,32 +130,27 @@ class GraphCanvas(FigureCanvas):
         self.scale_type = QComboBox()
         self.scale_type.addItems(['Radians', 'Degrees'])
 
+
 class MainWindow(QMainWindow):
     def __init__(self, calculator: GraphingCalculator):
         self.auth_window = None
-        global var_label, scale_label, range_group, controls_layout, sidebar_layout, var_selector_layout
         super().__init__()
         self.calculator = calculator
         self.current_user = None
         self.history_list = QListWidget()
         self.graph_data = {}
         self.var_selector_layout = QHBoxLayout()
+        self.var_label = QLabel("Variable:")
+        self.scale_label = QLabel("Scale:")
+        self.range_group = QWidget()
+        self.controls_layout = QVBoxLayout()
+        self.sidebar_layout = QVBoxLayout()
+        self.var_selector_layout = QHBoxLayout()
+        self.min_value = QDoubleSpinBox()
+        self.max_value = QDoubleSpinBox()
+        self.step_value = QDoubleSpinBox()
+        self.student_graph_list = QListWidget()
         self.student_graph_data = {}  # Initialize dictionary to store graph data
-
-        # Store widget references as instance variables
-        self.expr_input = None
-        self.second_expr_input = None
-        self.var_selector = None
-        self.scale_type = None
-        self.min_value = None
-        self.max_value = None
-        self.step_value = None
-        self.student_graph_list = None
-        self.comment_input = None
-        self.comments_list = None
-        self.canvas = None
-        self.student_selector = None
-
 
         # Main layout
         main_layout = QHBoxLayout()
@@ -212,21 +212,11 @@ class MainWindow(QMainWindow):
         input_layout = QVBoxLayout(input_group)
         input_layout.setSpacing(15)
 
-        # First add the variable and scale selectors
-        var_selector_layout.addWidget(var_label)
-        var_selector_layout.addWidget(self.var_selector)
-        var_selector_layout.addWidget(scale_label)
-        var_selector_layout.addWidget(self.scale_type)
-
-        # Add the selector group to the controls layout
-        controls_layout.addWidget(var_selector_layout)
-        controls_layout.addWidget(range_group)
-
-        # Now add inputs and controls to the sidebar
         # Add expression inputs first
         input_label = QLabel("Function Input")
         input_label.setStyleSheet("color: white; font-size: 13px; font-weight: bold;")
         sidebar_layout.addWidget(input_label)
+
         sidebar_layout.addWidget(self.expr_input)
         sidebar_layout.addWidget(self.second_expr_input)
 
@@ -309,7 +299,7 @@ class MainWindow(QMainWindow):
         range_group = QWidget()
         range_layout = QGridLayout(range_group)
 
-        # Styling for range spinboxes
+        # Styling for range spin boxes
         range_spinbox_style = """
             QDoubleSpinBox {
                 background-color: #2d2d2d;
@@ -353,13 +343,19 @@ class MainWindow(QMainWindow):
             range_layout.addWidget(range_label, i, 0)
             range_layout.addWidget(spinbox, i, 1)
 
+        self.var_selector_layout.addWidget(self.var_label)
+        self.var_selector_layout.addWidget(self.var_selector)
+        self.var_selector_layout.addWidget(self.scale_label)
+        self.var_selector_layout.addWidget(self.scale_type)
+
+        self.controls_layout.addWidget(self.var_selector_layout)
+        self.controls_layout.addWidget(self.range_group)
 
         # Add spacing and margins
         controls_layout.setContentsMargins(10, 10, 10, 10)
         controls_layout.setSpacing(10)
         var_selector_layout.setSpacing(10)
         range_layout.setSpacing(10)
-
 
         # Student graph history
         student_history_label = QLabel("My Graph History")
@@ -571,9 +567,6 @@ class MainWindow(QMainWindow):
                 if not self.student_graph_list.parent():
                     sidebar_layout.addWidget(self.student_graph_list)
 
-                # Load graphs for the logged-in student
-                self.load_student_graphs()
-
             # Update user info label
             self.user_info.setText(f"Welcome, {user.full_name} ({user.role.capitalize()})")
         except Exception as e:
@@ -640,7 +633,7 @@ class MainWindow(QMainWindow):
                 self.expr_input.setText(graph_data.get('expression', ''))
                 self.second_expr_input.setText(graph_data.get('expression2', ''))  # Optional
 
-                # Update the sidebar range spinboxes using the saved values
+                # Update the sidebar range spin boxes using the saved values
                 if 'x_min' in graph_data:
                     self.min_value.setValue(float(graph_data['x_min']))
                 if 'x_max' in graph_data:
@@ -914,7 +907,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            # Get current graph data from the input field and spinboxes
+            # Get current graph data from the input field and spin boxes
             expression = self.expr_input.text().strip()
             if not expression:
                 QMessageBox.warning(self, "Error", "Please enter an expression first")
@@ -997,9 +990,9 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Error", "Please enter an expression")
                 return
 
-            # Use the sidebar spinboxes for the range values
+            # Use the sidebar spin boxes for the range values
             # Here, we use min_value and max_value for both x- and y-axes.
-            # If you want separate controls for y, you can create new spinboxes.
+            # If you want separate controls for y, you can create new spin boxes.
             x_min = self.min_value.value()
             x_max = self.max_value.value()
             y_min = self.min_value.value()  # For now, reusing the same value
@@ -1033,9 +1026,9 @@ class MainWindow(QMainWindow):
                         'asin': np.arcsin,
                         'acos': np.arccos,
                         'atan': np.arctan,
-                        'sec': lambda x: 1 / np.cos(x),
-                        'csc': lambda x: 1 / np.sin(x),
-                        'cot': lambda x: 1 / np.tan(x),
+                        'sec': lambda l: 1 / np.cos(x),
+                        'csc': lambda l: 1 / np.sin(l),
+                        'cot': lambda l: 1 / np.tan(x),
                         'gamma': special.gamma,
                         'erf': special.erf,
                         'erfc': special.erfc,
@@ -1049,8 +1042,8 @@ class MainWindow(QMainWindow):
                     expr_sympy = sympify(expr)
                     f = lambdify('x', expr_sympy, modules=['numpy', math_funcs])
                     return f(x)
-                except Exception as e:
-                    raise ValueError(f"Error evaluating expression: {str(e)}")
+                except Exception as b:
+                    raise ValueError(f"Error evaluating expression: {str(b)}")
 
             # Calculate y values
             y_values = np.vectorize(lambda x: advanced_eval(x, expression))(x_values)
@@ -1110,24 +1103,25 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Unexpected error: {str(e)}")
 
-    def main(self):
-        # Create QApplication instance
-        app = QApplication(sys.argv)
 
-        # Set application style
-        app.setStyle('Fusion')
+def main():
+    # Create QApplication instance
+    app = QApplication(sys.argv)
 
-        # Create calculator backend
-        calculator = GraphingCalculator()
+    # Set application style
+    app.setStyle('Fusion')
 
-        # Create main window
-        window = MainWindow(calculator)
-        window.setWindowTitle("Advanced Graphing Calculator")
-        window.setMinimumSize(1200, 800)
-        window.show()
+    # Create calculator backend
+    calculator = GraphingCalculator()
 
-        # Start event loop
-        sys.exit(app.exec())
+    # Create main window
+    window = MainWindow(calculator)
+    window.setWindowTitle("Advanced Graphing Calculator")
+    window.setMinimumSize(1200, 800)
+    window.show()
+
+    # Start event loop
+    sys.exit(app.exec())
 
     if __name__ == "__main__":
-        main()
+            main()
