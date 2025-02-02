@@ -91,7 +91,7 @@ class GraphCanvas(FigureCanvas):
         self.history_list = QListWidget()
 
         # Create main layout first
-        main_layout = QHBoxLayout()
+        QHBoxLayout()
 
         # Create sidebar
         sidebar = QWidget()
@@ -127,12 +127,30 @@ class GraphCanvas(FigureCanvas):
 
 class MainWindow(QMainWindow):
     def __init__(self, calculator: GraphingCalculator):
+        self.auth_window = None
+        global var_label, scale_label, range_group, controls_layout
         super().__init__()
         self.calculator = calculator
         self.current_user = None
         self.history_list = QListWidget()
         self.graph_data = {}
-        self.student_graph_list = {}
+        self.var_selector_layout = QHBoxLayout()
+        self.student_graph_data = {}  # Initialize dictionary to store graph data
+
+        # Store widget references as instance variables
+        self.expr_input = None
+        self.second_expr_input = None
+        self.var_selector = None
+        self.scale_type = None
+        self.min_value = None
+        self.max_value = None
+        self.step_value = None
+        self.student_graph_list = None
+        self.comment_input = None
+        self.comments_list = None
+        self.canvas = None
+        self.student_selector = None
+
 
         # Main layout
         main_layout = QHBoxLayout()
@@ -194,19 +212,31 @@ class MainWindow(QMainWindow):
         input_layout = QVBoxLayout(input_group)
         input_layout.setSpacing(15)
 
+        # First add the variable and scale selectors
+        var_selector_layout.addWidget(var_label)
+        var_selector_layout.addWidget(self.var_selector)
+        var_selector_layout.addWidget(scale_label)
+        var_selector_layout.addWidget(self.scale_type)
+
+        # Add the selector group to the controls layout
+        controls_layout.addWidget(var_selector_layout)
+        controls_layout.addWidget(range_group)
+
+        # Now add inputs and controls to the sidebar
+        # Add expression inputs first
         input_label = QLabel("Function Input")
         input_label.setStyleSheet("color: white; font-size: 13px; font-weight: bold;")
-        input_layout.addWidget(input_label)
+        sidebar_layout.addWidget(input_label)
+        sidebar_layout.addWidget(self.expr_input)
+        sidebar_layout.addWidget(self.second_expr_input)
 
         self.expr_input = ModernLineEdit()
         self.expr_input.setMinimumHeight(35)
         self.expr_input.setPlaceholderText("Enter expression (e.g., sin(x))")
-        input_layout.addWidget(self.expr_input)
 
         self.second_expr_input = ModernLineEdit()
         self.second_expr_input.setMinimumHeight(35)
         self.second_expr_input.setPlaceholderText("Enter second expression (optional)")
-        input_layout.addWidget(self.second_expr_input)
 
         # Controls group (variable selector and ranges)
         controls_group = QWidget()
@@ -214,7 +244,7 @@ class MainWindow(QMainWindow):
 
         # Variable selector
         var_selector_group = QWidget()
-        var_selector_layout = QHBoxLayout(var_selector_group)
+        var_selector_group.setLayout(self.var_selector_layout)
 
         # Variable selector with enhanced styling
         var_label = QLabel("Variable:")
@@ -323,13 +353,6 @@ class MainWindow(QMainWindow):
             range_layout.addWidget(range_label, i, 0)
             range_layout.addWidget(spinbox, i, 1)
 
-        # Add everything to the main controls layout
-        var_selector_layout.addWidget(var_label)
-        var_selector_layout.addWidget(self.var_selector)
-        var_selector_layout.addWidget(scale_label)
-        var_selector_layout.addWidget(self.scale_type)
-        controls_layout.addWidget(var_selector_group)
-        controls_layout.addWidget(range_group)
 
         # Add spacing and margins
         controls_layout.setContentsMargins(10, 10, 10, 10)
@@ -343,9 +366,9 @@ class MainWindow(QMainWindow):
         student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         sidebar_layout.addWidget(student_history_label)
 
-        self.student_graph_list = QListWidget()
-        self.student_graph_list.setMinimumHeight(50)
-        self.student_graph_list.setStyleSheet("""
+        self.student_list = QListWidget()
+        self.student_list.setMinimumHeight(50)
+        self.student_list.setStyleSheet("""
                             QListWidget {
                                 background-color: #2d2d2d;
                                 border: 2px solid #3d3d3d;
@@ -360,9 +383,9 @@ class MainWindow(QMainWindow):
                                 background-color: #4CAF50;
                             }
                         """)
-        self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
-        sidebar_layout.addWidget(self.student_graph_list)
+        self.student_list.itemClicked.connect(self.load_graph_from_history)
         self.load_student_graphs()
+        sidebar_layout.addWidget(self.student_list)
 
         self.student_controls = QWidget()
         student_layout = QVBoxLayout(self.student_controls)
@@ -608,27 +631,23 @@ class MainWindow(QMainWindow):
             return []
 
     def load_graph_from_history(self, item):
-        """Load a graph when selected from the history list."""
         try:
             graph_name = item.text()
             if graph_name in self.student_graph_data:
                 graph_data = self.student_graph_data[graph_name]
 
-                # Update inputs with graph data
+                # Update expression inputs with saved graph data
                 self.expr_input.setText(graph_data.get('expression', ''))
-                self.second_expr_input.setText(graph_data.get('expression2', ''))  # Optional second expression
+                self.second_expr_input.setText(graph_data.get('expression2', ''))  # Optional
 
-                # Update ranges if they exist in graph data
+                # Update the sidebar range spinboxes using the saved values
                 if 'x_min' in graph_data:
-                    self.x_min.setValue(float(graph_data['x_min']))
+                    self.min_value.setValue(float(graph_data['x_min']))
                 if 'x_max' in graph_data:
-                    self.x_max.setValue(float(graph_data['x_max']))
-                if 'y_min' in graph_data:
-                    self.y_min.setValue(float(graph_data['y_min']))
-                if 'y_max' in graph_data:
-                    self.y_max.setValue(float(graph_data['y_max']))
+                    self.max_value.setValue(float(graph_data['x_max']))
+                # If you later add separate y-range controls, update them here accordingly
 
-                # Plot the graph
+                # Plot the graph using the updated values
                 self.plot_graph()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading graph: {str(e)}")
@@ -890,44 +909,43 @@ class MainWindow(QMainWindow):
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def save_graph(self):
-        """Save the current graph to the database"""
         if not self.current_user:
             QMessageBox.warning(self, "Error", "Please log in to save graphs")
             return
 
         try:
-            # Get current graph data
+            # Get current graph data from the input field and spinboxes
             expression = self.expr_input.text().strip()
             if not expression:
                 QMessageBox.warning(self, "Error", "Please enter an expression first")
                 return
 
-            # Get graph name from user
+            # Prompt user for a graph name
             name, ok = QInputDialog.getText(self, "Save Graph", "Enter a name for this graph:")
             if not ok or not name:
                 return
 
-            # Create graph data dictionary
             graph_data = {
                 'name': name,
                 'expression': expression,
                 'variable': self.var_selector.currentText(),
-                'x': self.x.value(),
-                'y': self.y.value(),
+                'x_min': self.min_value.value(),
+                'x_max': self.max_value.value(),
+                # If you add separate controls for y, include:
+                # 'y_min': self.y_min.value(),
+                # 'y_max': self.y_max.value(),
                 'scale_type': self.scale_type.currentText().lower()
             }
 
-            # Save to database
             from database import AdvancedDatabase
             db = AdvancedDatabase()
 
-            # Print debug information
             print(f"Debug - User ID: {self.current_user.id}")
             print(f"Debug - Graph Data: {graph_data}")
 
             db.save_graph_state(self.current_user.id, graph_data)
 
-            # Update the history list
+            # Update history after saving
             self.update_history()
 
             QMessageBox.information(self, "Success", "Graph saved successfully!")
@@ -938,7 +956,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error saving graph: {str(e)}")
             print(f"Debug - General Error: {str(e)}")
-
 
     def add_comment(self):
         """Add a teacher comment to the selected graph"""
@@ -974,19 +991,23 @@ class MainWindow(QMainWindow):
             self.canvas.axes.clear()
             self.canvas.axes.grid(True, color='#666666', linestyle='--', alpha=0.5)
 
-            # Get input values
+            # Get the expression from the input field
             expression = self.expr_input.text().strip()
             if not expression:
                 QMessageBox.warning(self, "Error", "Please enter an expression")
                 return
 
-            x_min = self.x_min.value()
-            x_max = self.x_max.value()
-            y_min = self.y_min.value()
-            y_max = self.y_max.value()
+            # Use the sidebar spinboxes for the range values
+            # Here, we use min_value and max_value for both x- and y-axes.
+            # If you want separate controls for y, you can create new spinboxes.
+            x_min = self.min_value.value()
+            x_max = self.max_value.value()
+            y_min = self.min_value.value()  # For now, reusing the same value
+            y_max = self.max_value.value()  # For now, reusing the same value
+
             scale_type = self.scale_type.currentText().lower()
 
-            # Generate x values based on scale type
+            # Generate x values based on the selected scale type
             if scale_type == 'log':
                 x_min = max(1e-10, x_min)  # Prevent log(0) errors
                 x_values = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
@@ -994,11 +1015,10 @@ class MainWindow(QMainWindow):
             else:
                 x_values = np.linspace(x_min, x_max, 1000)
 
+            # Function to evaluate the mathematical expression
             def advanced_eval(x, expr):
                 try:
-                    # Advanced mathematical functions dictionary
                     math_funcs = {
-                        # Basic functions
                         'ln': np.log,
                         'log': np.log10,
                         'sin': np.sin,
@@ -1007,8 +1027,6 @@ class MainWindow(QMainWindow):
                         'sqrt': np.sqrt,
                         'exp': np.exp,
                         'abs': np.abs,
-
-                        # Advanced functions
                         'sinh': np.sinh,
                         'cosh': np.cosh,
                         'tanh': np.tanh,
@@ -1018,107 +1036,56 @@ class MainWindow(QMainWindow):
                         'sec': lambda x: 1 / np.cos(x),
                         'csc': lambda x: 1 / np.sin(x),
                         'cot': lambda x: 1 / np.tan(x),
-
-                        # Special functions
                         'gamma': special.gamma,
                         'erf': special.erf,
                         'erfc': special.erfc,
                         'beta': special.beta,
                         'factorial': special.factorial,
-
-                        # Constants
                         'pi': np.pi,
                         'e': np.e,
                         'inf': np.inf,
                         'golden': (1 + np.sqrt(5)) / 2
                     }
-
-                    # Handle piecewise functions
-                    if 'piecewise' in expr.lower():
-                        return eval_piecewise(x, expr, math_funcs)
-
-                    # Handle lambda functions
-                    if 'lambda' in expr.lower():
-                        return eval_lambda(x, expr, math_funcs)
-
-                    # Handle quadratic and polynomial equations
-                    if 'quad(' in expr.lower():
-                        return eval_quadratic(x, expr)
-
-                    # Convert expression to SymPy format for symbolic computation
-                    expr = sympify(expr)
-                    f = lambdify('x', expr, modules=['numpy', math_funcs])
+                    expr_sympy = sympify(expr)
+                    f = lambdify('x', expr_sympy, modules=['numpy', math_funcs])
                     return f(x)
-
                 except Exception as e:
                     raise ValueError(f"Error evaluating expression: {str(e)}")
 
-            def eval_piecewise(x, expr, math_funcs):
-                """Evaluate piecewise functions"""
-                # Example format: piecewise(x < 0: -x, x >= 0: x^2)
-                try:
-                    conditions = expr.split('piecewise(')[1].strip(')').split(',')
-                    for condition in conditions:
-                        cond, func = condition.split(':')
-                        if eval(cond, {"__builtins__": {}}, {"x": x, **math_funcs}):
-                            return eval(func, {"__builtins__": {}}, {"x": x, **math_funcs})
-                    return np.nan
-                except Exception as e:
-                    raise ValueError(f"Invalid piecewise function format: {str(e)}")
-
-            def eval_lambda(x, expr, math_funcs):
-                """Evaluate lambda functions"""
-                # Example format: lambda x: x^2 + 2*x + 1
-                try:
-                    func_body = expr.split('lambda x:')[1].strip()
-                    return eval(func_body, {"__builtins__": {}}, {"x": x, **math_funcs})
-                except Exception as e:
-                    raise ValueError(f"Invalid lambda function format: {str(e)}")
-
-            def eval_quadratic(x, expr):
-                """Evaluate quadratic equations"""
-                # Example format: quad(a,b,c) for ax^2 + bx + c
-                try:
-                    params = expr.split('quad(')[1].strip(')').split(',')
-                    a, b, c = map(float, params)
-                    return a * x ** 2 + b * x + c
-                except Exception as e:
-                    raise ValueError(f"Invalid quadratic equation format: {str(e)}")
-
-            # Calculate y values with vectorization and error handling
+            # Calculate y values
             y_values = np.vectorize(lambda x: advanced_eval(x, expression))(x_values)
 
-            # Handle complex numbers
+            # Plot the graph (handle complex numbers if needed)
             if np.iscomplexobj(y_values):
-                # Plot real and imaginary parts separately
-                self.canvas.axes.plot(x_values, y_values.real,
-                                      label=f"Re({expression})",
-                                      linewidth=2,
-                                      color='#1f77b4')
-                self.canvas.axes.plot(x_values, y_values.imag,
-                                      label=f"Im({expression})",
-                                      linewidth=2,
-                                      linestyle='--',
-                                      color='#ff7f0e')
+                self.canvas.axes.plot(
+                    x_values, y_values.real,
+                    label=f"Re({expression})",
+                    linewidth=2,
+                    color='#1f77b4'
+                )
+                self.canvas.axes.plot(
+                    x_values, y_values.imag,
+                    label=f"Im({expression})",
+                    linewidth=2,
+                    linestyle='--',
+                    color='#ff7f0e'
+                )
             else:
-                # Handle infinities and NaN values
                 mask = np.isfinite(y_values)
                 x_values = x_values[mask]
                 y_values = y_values[mask]
+                self.canvas.axes.plot(
+                    x_values, y_values,
+                    label=expression,
+                    linewidth=2,
+                    color='#1f77b4'
+                )
 
-                # Plot regular function
-                self.canvas.axes.plot(x_values, y_values,
-                                      label=expression,
-                                      linewidth=2,
-                                      color='#1f77b4')
-
-            # Set axis scales and limits
-            if self.y_scale_type.currentText().lower() == 'log':
-                self.canvas.axes.set_yscale('log')
-            self.canvas.axes.set_ylim(y_min, y_max)
+            # Set the axis limits
             self.canvas.axes.set_xlim(x_min, x_max)
+            self.canvas.axes.set_ylim(y_min, y_max)
 
-            # Enhance graph appearance
+            # Enhance the plot appearance
             self.canvas.axes.set_xlabel("x", fontsize=10)
             self.canvas.axes.set_ylabel("y", fontsize=10)
             self.canvas.axes.legend(fontsize=10)
@@ -1126,16 +1093,16 @@ class MainWindow(QMainWindow):
             self.canvas.axes.spines['right'].set_visible(False)
             self.canvas.axes.set_title(f"Graph of {expression}", pad=10)
 
-            # Add coordinate axes
+            # Draw coordinate axes through zero if applicable
             if x_min <= 0 <= x_max:
                 self.canvas.axes.axvline(x=0, color='k', linestyle='-', alpha=0.3)
             if y_min <= 0 <= y_max:
                 self.canvas.axes.axhline(y=0, color='k', linestyle='-', alpha=0.3)
 
-            # Add grid for better readability
+            # Add gridlines
             self.canvas.axes.grid(True, which='both', linestyle='--', alpha=0.3)
 
-            # Refresh the canvas
+            # Refresh the canvas to display the graph
             self.canvas.draw()
 
         except ValueError as e:
