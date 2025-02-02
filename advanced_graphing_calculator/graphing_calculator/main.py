@@ -234,10 +234,9 @@ class MainWindow(QMainWindow):
         controls_group = QWidget()
         controls_layout = QVBoxLayout(controls_group)
 
-        # Variable selector
-        var_selector_layout = QHBoxLayout()
+        # Create a widget for the variable selector
         var_selector_widget = QWidget()
-        var_selector_widget.setLayout(var_selector_layout)
+        var_selector_layout = QHBoxLayout(var_selector_widget)  # Attach layout to widget
 
         # Variable selector with enhanced styling
         var_label = QLabel("Variable:")
@@ -251,7 +250,7 @@ class MainWindow(QMainWindow):
         """)
 
         self.var_selector = QComboBox()
-        self.var_selector.addItems(['x', 'y', 't', 'θ', 'r'])  # Added polar coordinates
+        self.var_selector.addItems(['x', 'y', 't', 'θ', 'r'])
         self.var_selector.setStyleSheet("""
             QComboBox {
                 background-color: #2d2d2d;
@@ -265,72 +264,81 @@ class MainWindow(QMainWindow):
                 border-color: #4d4d4d;
                 background-color: #353535;
             }
-            QComboBox:down-arrow {
-                image: url(down_arrow.png);
-                width: 12px;
-                height: 12px;
-            }
             QComboBox::drop-down {
                 border: none;
                 width: 20px;
             }
-            QComboBox QAbstractItemView {
-                background-color: #2d2d2d;
-                color: white;
-                selection-background-color: #404040;
-                selection-color: white;
-                border: 1px solid #3d3d3d;
-            }
         """)
 
-        # Add widgets to layout
-        var_selector_layout.addWidget(var_label)
-        var_selector_layout.addWidget(self.var_selector)
-
-        self.scale_label = QLabel("Scale:")
-        self.scale_label.setStyleSheet("""
-            QLabel {
-                color: white;
-                font-weight: bold;
-                font-size: 12px;
-                margin-right: 5px;
-            }
-        """)
+        # Scale type selector
+        scale_label = QLabel("Scale:")
+        scale_label.setStyleSheet(var_label.styleSheet())  # Reuse the style
 
         self.scale_type = QComboBox()
         self.scale_type.addItems(['Linear', 'Log', 'Polar', 'Parametric'])
-        self.scale_type.setStyleSheet(self.var_selector.styleSheet())  # Reuse the style
+        self.scale_type.setStyleSheet(self.var_selector.styleSheet())
 
-        self.var_selector_layout.addWidget(self.var_label)
-        self.var_selector_layout.addWidget(self.var_selector)
-        self.var_selector_layout.addWidget(self.scale_label)
-        self.var_selector_layout.addWidget(self.scale_type)
+        # Add widgets to var_selector_layout
+        var_selector_layout.addWidget(var_label)
+        var_selector_layout.addWidget(self.var_selector)
+        var_selector_layout.addWidget(scale_label)
+        var_selector_layout.addWidget(self.scale_type)
+        var_selector_layout.addStretch()  # Add stretch to keep widgets aligned to the left
 
-        self.controls_layout.addWidget(var_selector_widget)
-        self.controls_layout.addWidget(self.range_group)
+        # Add var_selector_widget to controls_layout
+        controls_layout.addWidget(var_selector_widget)
 
-                      # Range controls with labels
+        # Range controls
         range_group = QWidget()
         range_layout = QGridLayout(range_group)
-        # Min/Max range controls
-        for i, (label, attr) in enumerate([
+        range_layout.setSpacing(10)
+
+        # Range spinbox styling
+        range_spinbox_style = """
+            QDoubleSpinBox {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+                min-width: 80px;
+            }
+            QDoubleSpinBox:hover {
+                border-color: #4d4d4d;
+                background-color: #353535;
+            }
+            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+                background-color: #3d3d3d;
+                border: none;
+                width: 16px;
+            }
+        """
+
+        # Create range controls
+        for i, (label_text, attr_name) in enumerate([
             ("Min:", "min_value"),
             ("Max:", "max_value"),
             ("Step:", "step_value")
         ]):
-            range_label = QLabel(label)
-            range_label.setStyleSheet("color: white; font-weight: bold; font-size: 12px;")
+            label = QLabel(label_text)
+            label.setStyleSheet("color: white; font-weight: bold; font-size: 12px;")
 
             spinbox = QDoubleSpinBox()
             spinbox.setRange(-1000, 1000)
             spinbox.setDecimals(3)
-            spinbox.setValue(-10 if "min" in label.lower() else 10)
+            spinbox.setValue(-10 if "min" in label_text.lower() else 10)
             spinbox.setSingleStep(0.1)
             spinbox.setStyleSheet(range_spinbox_style)
 
-            setattr(self, attr, spinbox)
-            range_layout.addWidget(range_label, i, 0)
+            setattr(self, attr_name, spinbox)
+            range_layout.addWidget(label, i, 0)
             range_layout.addWidget(spinbox, i, 1)
+
+        # Add range_group to controls_layout
+        controls_layout.addWidget(range_group)
+
+        # Add controls_group to sidebar_layout
+        sidebar_layout.addWidget(controls_group)
 
                 # Add spacing and margins
         controls_layout.setContentsMargins(10, 10, 10, 10)
