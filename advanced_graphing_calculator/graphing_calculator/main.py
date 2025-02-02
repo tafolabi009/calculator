@@ -7,6 +7,8 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QListWidget, QInputDialog, QFileDialog)
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import QListWidgetItem
+from scipy import special, optimize
+from sympy import sympify, lambdify
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -214,10 +216,19 @@ class MainWindow(QMainWindow):
         var_selector_group = QWidget()
         var_selector_layout = QHBoxLayout(var_selector_group)
 
+        # Variable selector with enhanced styling
         var_label = QLabel("Variable:")
-        var_label.setStyleSheet("color: white; font-weight: bold;")
+        var_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-weight: bold;
+                font-size: 12px;
+                margin-right: 5px;
+            }
+        """)
+
         self.var_selector = QComboBox()
-        self.var_selector.addItems(['x', 'y', 't'])
+        self.var_selector.addItems(['x', 'y', 't', 'θ', 'r'])  # Added polar coordinates
         self.var_selector.setStyleSheet("""
             QComboBox {
                 background-color: #2d2d2d;
@@ -225,105 +236,113 @@ class MainWindow(QMainWindow):
                 border: 2px solid #3d3d3d;
                 border-radius: 4px;
                 padding: 5px;
+                min-width: 80px;
+            }
+            QComboBox:hover {
+                border-color: #4d4d4d;
+                background-color: #353535;
+            }
+            QComboBox:down-arrow {
+                image: url(down_arrow.png);
+                width: 12px;
+                height: 12px;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #2d2d2d;
+                color: white;
+                selection-background-color: #404040;
+                selection-color: white;
+                border: 1px solid #3d3d3d;
             }
         """)
-        var_selector_layout.addWidget(var_label)
-        var_selector_layout.addWidget(self.var_selector)
-        controls_layout.addWidget(var_selector_group)
 
-        # Range controls
+        # Scale type selector
+        scale_label = QLabel("Scale:")
+        scale_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-weight: bold;
+                font-size: 12px;
+                margin-right: 5px;
+            }
+        """)
+
+        self.scale_type = QComboBox()
+        self.scale_type.addItems(['Linear', 'Log', 'Polar', 'Parametric'])
+        self.scale_type.setStyleSheet(self.var_selector.styleSheet())  # Reuse the style
+
+        # Range controls with labels
         range_group = QWidget()
         range_layout = QGridLayout(range_group)
 
-        # X range
-        x_label = QLabel("X Range:")
-        x_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(x_label, 0, 0)
-
-        self.x_min = QDoubleSpinBox()
-        self.x_min.setRange(-1000, 1000)
-        self.x_min.setValue(-10)
-        self.x_min.setStyleSheet("""
+        # Styling for range spinboxes
+        range_spinbox_style = """
             QDoubleSpinBox {
                 background-color: #2d2d2d;
                 color: white;
                 border: 2px solid #3d3d3d;
                 border-radius: 4px;
                 padding: 5px;
+                min-width: 80px;
             }
-        """)
-        range_layout.addWidget(self.x_min, 0, 1)
-        range_layout.addWidget(QLabel("to", styleSheet="color: white;"), 0, 2)
-
-        self.x_max = QDoubleSpinBox()
-        self.x_max.setRange(-1000, 1000)
-        self.x_max.setValue(10)
-        self.x_max.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
+            QDoubleSpinBox:hover {
+                border-color: #4d4d4d;
+                background-color: #353535;
             }
-        """)
-        range_layout.addWidget(self.x_max, 0, 3)
-
-        # Y range
-        y_label = QLabel("Y Range:")
-        y_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(y_label, 1, 0)
-
-        self.y_min = QDoubleSpinBox()
-        self.y_min.setRange(-1000, 1000)
-        self.y_min.setValue(-10)
-        self.y_min.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
+            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+                background-color: #3d3d3d;
+                border: none;
+                width: 16px;
             }
-        """)
-        range_layout.addWidget(self.y_min, 1, 1)
-        range_layout.addWidget(QLabel("to", styleSheet="color: white;"), 1, 2)
-
-        self.y_max = QDoubleSpinBox()
-        self.y_max.setRange(-1000, 1000)
-        self.y_max.setValue(10)
-        self.y_max.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
+            QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover {
+                background-color: #4d4d4d;
             }
-        """)
-        range_layout.addWidget(self.y_max, 1, 3)
+        """
 
-        # Scale type
-        scale_label = QLabel("Scale Type:")
-        scale_label.setStyleSheet("color: white; font-weight: bold;")
-        range_layout.addWidget(scale_label, 2, 0)
+        # Min/Max range controls
+        for i, (label, attr) in enumerate([
+            ("Min:", "min_value"),
+            ("Max:", "max_value"),
+            ("Step:", "step_value")
+        ]):
+            range_label = QLabel(label)
+            range_label.setStyleSheet("color: white; font-weight: bold; font-size: 12px;")
 
-        self.scale_type = QComboBox()
-        self.scale_type.addItems(['Radians', 'Degrees'])
-        self.scale_type.setStyleSheet("""
-            QComboBox {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        range_layout.addWidget(self.scale_type, 2, 1, 1, 3)
+            spinbox = QDoubleSpinBox()
+            spinbox.setRange(-1000, 1000)
+            spinbox.setDecimals(3)
+            spinbox.setValue(-10 if "min" in label.lower() else 10)
+            spinbox.setSingleStep(0.1)
+            spinbox.setStyleSheet(range_spinbox_style)
 
+            setattr(self, attr, spinbox)
+            range_layout.addWidget(range_label, i, 0)
+            range_layout.addWidget(spinbox, i, 1)
+
+        # Add everything to the main controls layout
+        var_selector_layout.addWidget(var_label)
+        var_selector_layout.addWidget(self.var_selector)
+        var_selector_layout.addWidget(scale_label)
+        var_selector_layout.addWidget(self.scale_type)
+        controls_layout.addWidget(var_selector_group)
         controls_layout.addWidget(range_group)
-        input_layout.addWidget(controls_group)
-        sidebar_layout.addWidget(input_group)
+
+        # Add spacing and margins
+        controls_layout.setContentsMargins(10, 10, 10, 10)
+        controls_layout.setSpacing(10)
+        var_selector_layout.setSpacing(10)
+        range_layout.setSpacing(10)
+
+        # Optional: Add a separator line
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        separator.setStyleSheet("background-color: #3d3d3d;")
+        controls_layout.addWidget(separator)
 
         # Student graph history
         student_history_label = QLabel("My Graph History")
@@ -899,10 +918,8 @@ class MainWindow(QMainWindow):
                 'name': name,
                 'expression': expression,
                 'variable': self.var_selector.currentText(),
-                'x_min': self.x_min.value(),
-                'x_max': self.x_max.value(),
-                'y_min': self.y_min.value(),
-                'y_max': self.y_max.value(),
+                'x': self.x.value(),
+                'y': self.y.value(),
                 'scale_type': self.scale_type.currentText().lower()
             }
 
@@ -961,7 +978,7 @@ class MainWindow(QMainWindow):
         try:
             # Clear the plot
             self.canvas.axes.clear()
-            self.canvas.axes.grid(True, color='#666666')
+            self.canvas.axes.grid(True, color='#666666', linestyle='--', alpha=0.5)
 
             # Get input values
             expression = self.expr_input.text().strip()
@@ -975,23 +992,154 @@ class MainWindow(QMainWindow):
             y_max = self.y_max.value()
             scale_type = self.scale_type.currentText().lower()
 
-            # Generate x values
-            x_values = np.linspace(x_min, x_max, 1000)
-            y_values = np.vectorize(
-                lambda x: self.calculator.evaluate_expression(expression, x, scale_type)
-            )(x_values)
+            # Generate x values based on scale type
+            if scale_type == 'log':
+                x_min = max(1e-10, x_min)  # Prevent log(0) errors
+                x_values = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
+                self.canvas.axes.set_xscale('log')
+            else:
+                x_values = np.linspace(x_min, x_max, 1000)
 
-            # Plot the graph
-            self.canvas.axes.plot(x_values, y_values, label='Graph')
+            def advanced_eval(x, expr):
+                try:
+                    # Advanced mathematical functions dictionary
+                    math_funcs = {
+                        # Basic functions
+                        'ln': np.log,
+                        'log': np.log10,
+                        'sin': np.sin,
+                        'cos': np.cos,
+                        'tan': np.tan,
+                        'sqrt': np.sqrt,
+                        'exp': np.exp,
+                        'abs': np.abs,
 
-            # Set axis limits
-            self.canvas.axes.set_xlim(x_min, x_max)
+                        # Advanced functions
+                        'sinh': np.sinh,
+                        'cosh': np.cosh,
+                        'tanh': np.tanh,
+                        'asin': np.arcsin,
+                        'acos': np.arccos,
+                        'atan': np.arctan,
+                        'sec': lambda x: 1 / np.cos(x),
+                        'csc': lambda x: 1 / np.sin(x),
+                        'cot': lambda x: 1 / np.tan(x),
+
+                        # Special functions
+                        'gamma': special.gamma,
+                        'erf': special.erf,
+                        'erfc': special.erfc,
+                        'beta': special.beta,
+                        'factorial': special.factorial,
+
+                        # Constants
+                        'pi': np.pi,
+                        'e': np.e,
+                        'inf': np.inf,
+                        'golden': (1 + np.sqrt(5)) / 2
+                    }
+
+                    # Handle piecewise functions
+                    if 'piecewise' in expr.lower():
+                        return eval_piecewise(x, expr, math_funcs)
+
+                    # Handle lambda functions
+                    if 'lambda' in expr.lower():
+                        return eval_lambda(x, expr, math_funcs)
+
+                    # Handle quadratic and polynomial equations
+                    if 'quad(' in expr.lower():
+                        return eval_quadratic(x, expr)
+
+                    # Convert expression to SymPy format for symbolic computation
+                    expr = sympify(expr)
+                    f = lambdify('x', expr, modules=['numpy', math_funcs])
+                    return f(x)
+
+                except Exception as e:
+                    raise ValueError(f"Error evaluating expression: {str(e)}")
+
+            def eval_piecewise(x, expr, math_funcs):
+                """Evaluate piecewise functions"""
+                # Example format: piecewise(x < 0: -x, x >= 0: x^2)
+                try:
+                    conditions = expr.split('piecewise(')[1].strip(')').split(',')
+                    for condition in conditions:
+                        cond, func = condition.split(':')
+                        if eval(cond, {"__builtins__": {}}, {"x": x, **math_funcs}):
+                            return eval(func, {"__builtins__": {}}, {"x": x, **math_funcs})
+                    return np.nan
+                except Exception as e:
+                    raise ValueError(f"Invalid piecewise function format: {str(e)}")
+
+            def eval_lambda(x, expr, math_funcs):
+                """Evaluate lambda functions"""
+                # Example format: lambda x: x^2 + 2*x + 1
+                try:
+                    func_body = expr.split('lambda x:')[1].strip()
+                    return eval(func_body, {"__builtins__": {}}, {"x": x, **math_funcs})
+                except Exception as e:
+                    raise ValueError(f"Invalid lambda function format: {str(e)}")
+
+            def eval_quadratic(x, expr):
+                """Evaluate quadratic equations"""
+                # Example format: quad(a,b,c) for ax^2 + bx + c
+                try:
+                    params = expr.split('quad(')[1].strip(')').split(',')
+                    a, b, c = map(float, params)
+                    return a * x ** 2 + b * x + c
+                except Exception as e:
+                    raise ValueError(f"Invalid quadratic equation format: {str(e)}")
+
+            # Calculate y values with vectorization and error handling
+            y_values = np.vectorize(lambda x: advanced_eval(x, expression))(x_values)
+
+            # Handle complex numbers
+            if np.iscomplexobj(y_values):
+                # Plot real and imaginary parts separately
+                self.canvas.axes.plot(x_values, y_values.real,
+                                      label=f"Re({expression})",
+                                      linewidth=2,
+                                      color='#1f77b4')
+                self.canvas.axes.plot(x_values, y_values.imag,
+                                      label=f"Im({expression})",
+                                      linewidth=2,
+                                      linestyle='--',
+                                      color='#ff7f0e')
+            else:
+                # Handle infinities and NaN values
+                mask = np.isfinite(y_values)
+                x_values = x_values[mask]
+                y_values = y_values[mask]
+
+                # Plot regular function
+                self.canvas.axes.plot(x_values, y_values,
+                                      label=expression,
+                                      linewidth=2,
+                                      color='#1f77b4')
+
+            # Set axis scales and limits
+            if self.y_scale_type.currentText().lower() == 'log':
+                self.canvas.axes.set_yscale('log')
             self.canvas.axes.set_ylim(y_min, y_max)
+            self.canvas.axes.set_xlim(x_min, x_max)
 
-            # Add labels and legend
-            self.canvas.axes.set_xlabel("x")
-            self.canvas.axes.set_ylabel("y")
-            self.canvas.axes.legend()
+            # Enhance graph appearance
+            self.canvas.axes.set_xlabel("x", fontsize=10)
+            self.canvas.axes.set_ylabel("y", fontsize=10)
+            self.canvas.axes.legend(fontsize=10)
+            self.canvas.axes.spines['top'].set_visible(False)
+            self.canvas.axes.spines['right'].set_visible(False)
+            self.canvas.axes.set_title(f"Graph of {expression}", pad=10)
+
+            # Add coordinate axes
+            if x_min <= 0 <= x_max:
+                self.canvas.axes.axvline(x=0, color='k', linestyle='-', alpha=0.3)
+            if y_min <= 0 <= y_max:
+                self.canvas.axes.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+
+            # Add grid for better readability
+            self.canvas.axes.grid(True, which='both', linestyle='--', alpha=0.3)
 
             # Refresh the canvas
             self.canvas.draw()
