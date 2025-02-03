@@ -342,6 +342,7 @@ class MainWindow(QMainWindow):
         # Add controls_group to sidebar_layout
         sidebar_layout.addWidget(controls_group)
 
+        # Student controls (for graph history)
         self.student_controls = QWidget()
         student_layout = QVBoxLayout(self.student_controls)
         student_layout.setSpacing(5)
@@ -363,7 +364,7 @@ class MainWindow(QMainWindow):
 
         # Create the graph list widget with proper styling
         self.student_list = QListWidget()
-        self.student_list.setMinimumHeight(200)  # Increase minimum height
+        self.student_list.setMinimumHeight(200)
         self.student_list.setStyleSheet("""
             QListWidget {
                 background-color: #2d2d2d;
@@ -392,17 +393,11 @@ class MainWindow(QMainWindow):
         self.student_list.itemSelectionChanged.connect(self.on_graph_selection_changed)
 
         student_history_layout.addWidget(self.student_list)
-        sidebar_layout.addWidget(student_history_container)
+        student_layout.addWidget(student_history_container)
 
-        # Add spacing and margins
-        controls_layout.setContentsMargins(3, 3, 3, 3)
-        controls_layout.setSpacing(3)
-        var_selector_layout.setSpacing(3)
-        range_layout.setSpacing(3)
-
+        # Add student controls to sidebar
         sidebar_layout.addWidget(self.student_controls)
         self.student_controls.hide()  # Initially hidden
-
 
         # Teacher controls
         self.teacher_controls = QWidget()
@@ -433,35 +428,6 @@ class MainWindow(QMainWindow):
         """)
         self.student_selector.currentIndexChanged.connect(self.load_selected_student_graphs)
         teacher_layout.addWidget(self.student_selector)
-
-        # Student graph list
-        student_history_label = QLabel("Selected Student's Graphs")
-        student_history_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        teacher_layout.addWidget(student_history_label)
-
-        self.student_graph_list = QListWidget()
-        self.student_graph_list.setMinimumHeight(200)  # Increased height for better visibility
-        self.student_graph_list.setStyleSheet("""
-            QListWidget {
-                background-color: #2d2d2d;
-                border: 2px solid #3d3d3d;
-                border-radius: 6px;
-                color: white;
-                font-size: 12px;
-            }
-            QListWidget::item {
-                padding: 10px;
-                border-bottom: 1px solid #3d3d3d;
-            }
-            QListWidget::item:selected {
-                background-color: #2a82da;
-            }
-            QListWidget::item:hover {
-                background-color: #353535;
-            }
-        """)
-        self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
-        teacher_layout.addWidget(self.student_graph_list)
 
         # Comment section
         comment_label = QLabel("Add Comment")
@@ -576,19 +542,17 @@ class MainWindow(QMainWindow):
             self.current_user = user
 
             if user.role == 'teacher':
+                # Show teacher controls, hide student controls
                 self.teacher_controls.show()
-                self.student_selector.show()
                 self.student_controls.hide()
+                self.student_selector.show()
                 self.load_student_list()
             elif user.role == 'student':
+                # Hide teacher controls, show student controls
                 self.teacher_controls.hide()
-                self.student_selector.hide()
                 self.student_controls.show()
+                self.student_selector.hide()
                 self.load_student_graphs()
-
-                # Ensure the student graph list is in the sidebar
-                if not self.student_graph_list.parent():
-                    sidebar_layout.addWidget(self.student_graph_list)
 
             # Update user info label
             self.user_info.setText(f"Welcome, {user.full_name} ({user.role.capitalize()})")
