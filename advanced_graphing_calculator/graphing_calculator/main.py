@@ -342,12 +342,53 @@ class MainWindow(QMainWindow):
         # Add controls_group to sidebar_layout
         sidebar_layout.addWidget(controls_group)
 
-        # Add student graph history to sidebar
-        history_label, graph_list = self.setup_student_graph_history()
-        sidebar_layout.addWidget(history_label)
-        sidebar_layout.addWidget(graph_list)
-        self.student_graph_list.itemSelectionChanged.connect(self.on_graph_selection_changed)
-        self.history_list.itemSelectionChanged.connect(self.on_graph_selection_changed)
+        # Student graph history section
+        student_history_container = QWidget()
+        student_history_layout = QVBoxLayout(student_history_container)
+
+        student_history_label = QLabel("My Graph History")
+        student_history_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+        """)
+        student_history_layout.addWidget(student_history_label)
+
+        # Create the graph list widget with proper styling
+        self.student_list = QListWidget()
+        self.student_list.setMinimumHeight(200)  # Increase minimum height
+        self.student_list.setStyleSheet("""
+            QListWidget {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                font-size: 12px;
+                padding: 5px;
+            }
+            QListWidget::item {
+                padding: 8px;
+                border-bottom: 1px solid #3d3d3d;
+                margin: 2px 0px;
+            }
+            QListWidget::item:selected {
+                background-color: #2a82da;
+                border-radius: 4px;
+            }
+            QListWidget::item:hover {
+                background-color: #353535;
+            }
+        """)
+
+        # Connect signals
+        self.student_list.itemClicked.connect(self.load_graph_from_history)
+        self.student_list.itemSelectionChanged.connect(self.on_graph_selection_changed)
+
+        student_history_layout.addWidget(self.student_list)
+        sidebar_layout.addWidget(student_history_container)
 
         # Add spacing and margins
         controls_layout.setContentsMargins(3, 3, 3, 3)
@@ -546,99 +587,119 @@ class MainWindow(QMainWindow):
 
     def setup_student_graph_history(self):
         """Set up the student graph history section"""
+        # Create container widget
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 10, 0, 10)
+        layout.setSpacing(10)
+
         # Create and style the history label
         history_label = QLabel("My Graph History")
         history_label.setStyleSheet("""
             QLabel {
                 color: white;
-                font-size: 12px;
+                font-size: 16px;
                 font-weight: bold;
                 margin-bottom: 5px;
             }
         """)
+        layout.addWidget(history_label)
 
         # Create and configure the list widget
-        self.student_graph_list = QListWidget()
-        self.student_graph_list.setMinimumHeight(30)
-        self.student_graph_list.setStyleSheet("""
+        graph_list = QListWidget()
+        graph_list.setMinimumHeight(200)
+        graph_list.setStyleSheet("""
             QListWidget {
                 background-color: #2d2d2d;
                 border: 2px solid #3d3d3d;
                 border-radius: 6px;
                 color: white;
                 font-size: 12px;
+                padding: 5px;
             }
             QListWidget::item {
                 padding: 8px;
                 border-bottom: 1px solid #3d3d3d;
+                margin: 2px 0px;
             }
             QListWidget::item:selected {
                 background-color: #2a82da;
+                border-radius: 4px;
             }
             QListWidget::item:hover {
                 background-color: #353535;
             }
         """)
 
-        # Connect signals
-        self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
-        self.student_graph_list.itemSelectionChanged.connect(self.on_graph_selection_changed)
+        # Set word wrap and size adjustments
+        graph_list.setWordWrap(True)
+        graph_list.setSizeAdjustPolicy(
+            QListWidget.SizeAdjustPolicy.AdjustToContents
+        )
 
-        return history_label, self.student_graph_list
+        layout.addWidget(graph_list)
+
+        # Add stretch to push content to the top
+        layout.addStretch()
+
+        return container, graph_list
 
     def load_student_graphs(self):
-        """Load graphs for the logged-in student and update the UI."""
-        if not self.current_user:
+        """Load graphs for the logged-in student."""
+        if not self.current_user or self.current_user.role != 'student':
             return
+
+        print(f"Loading graphs for user: {self.current_user.username}")
 
         try:
             db = AdvancedDatabase()
             graphs = db.get_user_graphs(self.current_user.id)
 
-            # Clear existing lists
-            self.student_graph_list.clear()
-            self.student_graph_data.clear()
-            self.history_list.clear()
+            print(f"Fetched {len(graphs)} graphs")  # Debug print
+
+            # Clear existing items
+            self.student_list.clear()
+            self.student_graph_data = {}
 
             if graphs:
-                # Sort graphs by creation date (newest first)
-                sorted_graphs = sorted(
-                    graphs,
-                    key=lambda x: x.get('created_at', ''),
-                    reverse=True
-                )
-
-                for graph in sorted_graphs:
+                for graph in graphs:
                     graph_name = graph.get('name', 'Unnamed Graph')
                     created_at = graph.get('created_at', 'No date')
 
                     # Create display text
                     display_text = f"{graph_name} ({created_at})"
+                    print(f"Adding graph: {display_text}")  # Debug print
 
-                    # Add to student graph list
+                    # Create item with custom display
                     item = QListWidgetItem(display_text)
-                    self.student_graph_list.addItem(item)
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignLeft)
 
-                    # Add to history list
-                    self.history_list.addItem(display_text)
+                    # Store the graph ID in the item's data
+                    item.setData(Qt.ItemDataRole.UserRole, graph.get('id'))
+
+                    # Add to list
+                    self.student_list.addItem(item)
 
                     # Store graph data
                     self.student_graph_data[graph_name] = graph
-                    self.graph_data[graph_name] = graph
 
-                # Select the first graph
-                self.student_graph_list.setCurrentRow(0)
-                # Update comments for the first graph
-                if sorted_graphs:
-                    self.update_comments(sorted_graphs[0]['id'])
+                print(f"Added {self.student_list.count()} items to list")  # Debug print
+
+                # Select the first item
+                if self.student_list.count() > 0:
+                    self.student_list.setCurrentRow(0)
             else:
+                # Add placeholder item
                 placeholder = QListWidgetItem("No saved graphs")
-                self.student_graph_list.addItem(placeholder)
-                self.history_list.addItem("No saved graphs")
+                placeholder.setFlags(placeholder.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+                self.student_list.addItem(placeholder)
 
         except Exception as e:
+            print(f"Error loading graphs: {str(e)}")  # Debug print
             QMessageBox.critical(self, "Error", f"Error loading graphs: {str(e)}")
-            logging.error(f"Error loading student graphs: {str(e)}")
+
+        # Force update
+        self.student_list.update()
 
     def on_graph_selection_changed(self):
         """Handle selection changes in the graph lists."""
