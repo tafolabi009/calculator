@@ -399,14 +399,19 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self.student_controls)
         self.student_controls.hide()  # Initially hidden
 
-        # Teacher controls
+        # Teacher controls with student graph list
         self.teacher_controls = QWidget()
         teacher_layout = QVBoxLayout(self.teacher_controls)
         teacher_layout.setSpacing(15)
 
+        # Teacher header
         teacher_label = QLabel("Teacher Controls")
         teacher_label.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
         teacher_layout.addWidget(teacher_label)
+
+        # Student selector section
+        selector_section = QWidget()
+        selector_layout = QVBoxLayout(selector_section)
 
         # Student selector
         self.student_selector = QComboBox()
@@ -427,12 +432,62 @@ class MainWindow(QMainWindow):
             }
         """)
         self.student_selector.currentIndexChanged.connect(self.load_selected_student_graphs)
-        teacher_layout.addWidget(self.student_selector)
+        selector_layout.addWidget(self.student_selector)
+        teacher_layout.addWidget(selector_section)
+
+        # Selected student's graphs section
+        selected_student_section = QWidget()
+        selected_student_layout = QVBoxLayout(selected_student_section)
+
+        selected_student_label = QLabel("Student's Graphs")
+        selected_student_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+        """)
+        selected_student_layout.addWidget(selected_student_label)
+
+        # Graph list for selected student
+        self.student_graph_list = QListWidget()
+        self.student_graph_list.setMinimumHeight(200)
+        self.student_graph_list.setStyleSheet("""
+            QListWidget {
+                background-color: #2d2d2d;
+                border: 2px solid #3d3d3d;
+                border-radius: 6px;
+                color: white;
+                font-size: 12px;
+                padding: 5px;
+            }
+            QListWidget::item {
+                padding: 8px;
+                border-bottom: 1px solid #3d3d3d;
+                margin: 2px 0px;
+            }
+            QListWidget::item:selected {
+                background-color: #2a82da;
+                border-radius: 4px;
+            }
+            QListWidget::item:hover {
+                background-color: #353535;
+            }
+        """)
+        self.student_graph_list.itemClicked.connect(self.load_graph_from_history)
+        self.student_graph_list.itemSelectionChanged.connect(self.on_graph_selection_changed)
+        selected_student_layout.addWidget(self.student_graph_list)
+
+        teacher_layout.addWidget(selected_student_section)
 
         # Comment section
+        comment_section = QWidget()
+        comment_layout = QVBoxLayout(comment_section)
+
         comment_label = QLabel("Add Comment")
         comment_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        teacher_layout.addWidget(comment_label)
+        comment_layout.addWidget(comment_label)
 
         self.comment_input = CommentInput(self)
         self.comment_input.setMinimumHeight(60)
@@ -447,8 +502,11 @@ class MainWindow(QMainWindow):
                 font-size: 14px;
             }
         """)
-        teacher_layout.addWidget(self.comment_input)
+        comment_layout.addWidget(self.comment_input)
 
+        teacher_layout.addWidget(comment_section)
+
+        # Add the teacher controls to the sidebar
         sidebar_layout.addWidget(self.teacher_controls)
         self.teacher_controls.hide()  # Initially hidden
 
