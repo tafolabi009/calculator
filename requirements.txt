@@ -1,0 +1,16 @@
+# Core Dependencies for World-Class Graphing Calculator
+# Python 3.8+ required
+
+# GUI Framework
+PyQt6>=6.8.0,<7.0.0
+
+# Scientific Computing
+numpy>=1.24.0,<2.0.0
+scipy>=1.10.0,<2.0.0
+sympy>=1.12,<2.0.0
+
+# Visualization
+matplotlib>=3.7.0,<4.0.0
+
+# Database (SQLite comes with Python)
+# No additional package needed for SQLite3
