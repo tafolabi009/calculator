@@ -4,17 +4,22 @@ from typing import Optional, Dict, List
 import json
 import os
 import math
+import time
+from datetime import datetime, timedelta
 
 
 class Graph:
     def __init__(self, expression: str, variable: str, start: float, end: float,
-                 scale_type: str, comments: List[str] = None):
+                 scale_type: str, comments: List[str] = None, millisecond_mode: bool = False,
+                 timestamp: Optional[float] = None):
         self.expression = expression
         self.variable = variable
         self.start = start
         self.end = end
         self.scale_type = scale_type
         self.comments = comments or []
+        self.millisecond_mode = millisecond_mode
+        self.timestamp = timestamp or time.time()
 
     def to_dict(self):
         return {
@@ -23,7 +28,9 @@ class Graph:
             'start': self.start,
             'end': self.end,
             'scale_type': self.scale_type,
-            'comments': self.comments
+            'comments': self.comments,
+            'millisecond_mode': self.millisecond_mode,
+            'timestamp': self.timestamp
         }
 
     @classmethod
@@ -34,7 +41,9 @@ class Graph:
             start=data['start'],
             end=data['end'],
             scale_type=data['scale_type'],
-            comments=data.get('comments', [])
+            comments=data.get('comments', []),
+            millisecond_mode=data.get('millisecond_mode', False),
+            timestamp=data.get('timestamp', time.time())
         )
 
 
@@ -149,3 +158,52 @@ class GraphingCalculator:
             return x, y
         except Exception as e:
             raise ValueError(f"Invalid expression: {str(e)}")
+    
+    def plot_time_series(self, start_ms: float, end_ms: float, num_points: int = 1000):
+        """
+        Generate time-based data with millisecond precision
+        Returns timestamps in milliseconds and corresponding values
+        """
+        timestamps = np.linspace(start_ms, end_ms, num_points)
+        return timestamps
+    
+    def create_fire_gradient_colors(self, n_points: int):
+        """
+        Generate fire-themed gradient colors for plotting
+        Returns array of RGB colors transitioning from red to orange to yellow
+        """
+        colors = []
+        for i in range(n_points):
+            t = i / max(1, n_points - 1)
+            # Fire gradient: dark red -> red -> orange -> yellow
+            if t < 0.33:
+                # Dark red to red
+                r = 0.5 + 0.5 * (t / 0.33)
+                g = 0.0
+                b = 0.0
+            elif t < 0.66:
+                # Red to orange
+                r = 1.0
+                g = (t - 0.33) / 0.33 * 0.65
+                b = 0.0
+            else:
+                # Orange to yellow
+                r = 1.0
+                g = 0.65 + (t - 0.66) / 0.34 * 0.35
+                b = 0.0
+            colors.append((r, g, b))
+        return colors
+    
+    def get_advanced_interpolation(self, x_data, y_data, method='cubic'):
+        """
+        Apply advanced interpolation to data
+        Methods: 'linear', 'cubic', 'quadratic'
+        """
+        from scipy import interpolate
+        if method == 'cubic':
+            f = interpolate.interp1d(x_data, y_data, kind='cubic', fill_value='extrapolate')
+        elif method == 'quadratic':
+            f = interpolate.interp1d(x_data, y_data, kind='quadratic', fill_value='extrapolate')
+        else:
+            f = interpolate.interp1d(x_data, y_data, kind='linear', fill_value='extrapolate')
+        return f

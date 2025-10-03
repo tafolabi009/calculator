@@ -1,17 +1,21 @@
 import sys
 import logging
 import numpy as np
+import time
+from datetime import datetime
 from PyQt6.QtGui import QPalette, QColor, QIcon
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
                              QDoubleSpinBox, QTextEdit, QMessageBox, QGridLayout,
-                             QListWidget, QInputDialog, QFileDialog, QFrame, QListWidgetItem)
-from PyQt6.QtCore import Qt, QSize
+                             QListWidget, QInputDialog, QFileDialog, QFrame, QListWidgetItem,
+                             QCheckBox, QStatusBar)
+from PyQt6.QtCore import Qt, QSize, QTimer
 from scipy import special, optimize
 from sympy import sympify, lambdify, symbols, solve
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 from graphing_calculator import GraphingCalculator
 from auth_system import User
@@ -34,39 +38,81 @@ class DarkPalette(QPalette):
         self.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
 
 class ModernButton(QPushButton):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, fire_mode=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: #2a82da;
-                border: none;
-                color: white;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #3292ea;
-            }
-            QPushButton:pressed {
-                background-color: #1a72ca;
-            }
-        """)
+        if fire_mode:
+            # Fire-themed gradient button
+            self.setStyleSheet("""
+                QPushButton {
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                               stop:0 #ff4500, stop:0.5 #ff6347, stop:1 #ff8c00);
+                    border: none;
+                    color: white;
+                    padding: 10px 18px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    box-shadow: 0 4px 6px rgba(255, 69, 0, 0.4);
+                }
+                QPushButton:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                               stop:0 #ff6347, stop:0.5 #ff7f50, stop:1 #ffa500);
+                    box-shadow: 0 6px 8px rgba(255, 69, 0, 0.6);
+                }
+                QPushButton:pressed {
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                               stop:0 #ff2400, stop:0.5 #ff4500, stop:1 #ff6347);
+                    box-shadow: 0 2px 4px rgba(255, 36, 0, 0.3);
+                }
+            """)
+        else:
+            # Modern gradient button with shadows
+            self.setStyleSheet("""
+                QPushButton {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                               stop:0 #3498db, stop:1 #2980b9);
+                    border: none;
+                    color: white;
+                    padding: 10px 18px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    box-shadow: 0 4px 6px rgba(52, 152, 219, 0.4);
+                }
+                QPushButton:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                               stop:0 #5dade2, stop:1 #3498db);
+                    box-shadow: 0 6px 8px rgba(52, 152, 219, 0.6);
+                }
+                QPushButton:pressed {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                               stop:0 #2980b9, stop:1 #21618c);
+                    box-shadow: 0 2px 4px rgba(41, 128, 185, 0.3);
+                }
+            """)
 
 class ModernLineEdit(QLineEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setStyleSheet("""
             QLineEdit {
-                background-color: #2d2d2d;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                          stop:0 #34495e, stop:1 #2c3e50);
                 border: 2px solid #3d3d3d;
-                border-radius: 4px;
+                border-radius: 8px;
                 color: white;
-                padding: 6px;
+                padding: 10px;
                 font-size: 14px;
+                box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
             }
             QLineEdit:focus {
-                border: 2px solid #2a82da;
+                border: 2px solid #3498db;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                          stop:0 #2c3e50, stop:1 #34495e);
+                box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+            }
+            QLineEdit:hover {
+                border: 2px solid #5dade2;
             }
         """)
 
@@ -87,18 +133,48 @@ class CommentInput(QTextEdit):
 class GraphCanvas(FigureCanvas):
     def __init__(self, calculator: GraphingCalculator):
         fig = Figure(figsize=(8, 6), dpi=100)
-        fig.patch.set_facecolor('#353535')
+        # Modern dark theme background
+        fig.patch.set_facecolor('#1e1e1e')
         self.axes = fig.add_subplot(111)
-        self.axes.set_facecolor('#353535')
+        self.axes.set_facecolor('#1e1e1e')
         super().__init__(fig)
-        self.axes.grid(True, color='#666666')
-        self.axes.spines['bottom'].set_color('#666666')
-        self.axes.spines['top'].set_color('#666666')
-        self.axes.spines['right'].set_color('#666666')
-        self.axes.spines['left'].set_color('#666666')
-        self.axes.tick_params(axis='x', colors='#666666')
-        self.axes.tick_params(axis='y', colors='#666666')
+        self.axes.grid(True, color='#404040', linestyle='--', alpha=0.3)
+        # Enhanced border colors
+        self.axes.spines['bottom'].set_color('#3498db')
+        self.axes.spines['top'].set_color('#3498db')
+        self.axes.spines['right'].set_color('#3498db')
+        self.axes.spines['left'].set_color('#3498db')
+        self.axes.spines['bottom'].set_linewidth(2)
+        self.axes.spines['top'].set_linewidth(2)
+        self.axes.spines['right'].set_linewidth(2)
+        self.axes.spines['left'].set_linewidth(2)
+        self.axes.tick_params(axis='x', colors='#ecf0f1', labelsize=10)
+        self.axes.tick_params(axis='y', colors='#ecf0f1', labelsize=10)
         self.calculator = calculator
+        self.fire_mode = False
+        
+    def enable_fire_mode(self, enabled=True):
+        """Enable or disable fire visual theme"""
+        self.fire_mode = enabled
+        if enabled:
+            self.axes.set_facecolor('#1a0000')
+            self.axes.spines['bottom'].set_color('#ff4500')
+            self.axes.spines['top'].set_color('#ff4500')
+            self.axes.spines['right'].set_color('#ff4500')
+            self.axes.spines['left'].set_color('#ff4500')
+            self.axes.grid(True, color='#ff6347', linestyle='--', alpha=0.2)
+            self.axes.tick_params(axis='x', colors='#ffa500')
+            self.axes.tick_params(axis='y', colors='#ffa500')
+        else:
+            self.axes.set_facecolor('#1e1e1e')
+            self.axes.spines['bottom'].set_color('#3498db')
+            self.axes.spines['top'].set_color('#3498db')
+            self.axes.spines['right'].set_color('#3498db')
+            self.axes.spines['left'].set_color('#3498db')
+            self.axes.grid(True, color='#404040', linestyle='--', alpha=0.3)
+            self.axes.tick_params(axis='x', colors='#ecf0f1')
+            self.axes.tick_params(axis='y', colors='#ecf0f1')
+        self.draw()
 
 class MainWindow(QMainWindow):
     def __init__(self, calculator: GraphingCalculator):
@@ -274,6 +350,51 @@ class MainWindow(QMainWindow):
             range_layout.addWidget(label, i, 0)
             range_layout.addWidget(spinbox, i, 1)
         controls_layout.addWidget(range_group)
+        
+        # Add advanced features section
+        advanced_features_label = QLabel("Advanced Features")
+        advanced_features_label.setStyleSheet("color: white; font-size: 13px; font-weight: bold; margin-top: 10px;")
+        controls_layout.addWidget(advanced_features_label)
+        
+        # Fire mode checkbox
+        self.fire_mode_checkbox = QCheckBox("🔥 Fire Mode")
+        self.fire_mode_checkbox.setStyleSheet("""
+            QCheckBox {
+                color: white;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 5px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 2px solid #3d3d3d;
+                background-color: #2d2d2d;
+            }
+            QCheckBox::indicator:checked {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                           stop:0 #ff4500, stop:1 #ff8c00);
+                border: 2px solid #ff4500;
+            }
+            QCheckBox::indicator:hover {
+                border: 2px solid #5dade2;
+            }
+        """)
+        self.fire_mode_checkbox.stateChanged.connect(self.toggle_fire_mode)
+        self.fire_mode_checkbox.stateChanged.connect(self.sync_fire_button_from_checkbox)
+        controls_layout.addWidget(self.fire_mode_checkbox)
+        
+        # Millisecond plotting checkbox
+        self.millisecond_mode_checkbox = QCheckBox("⏱️ Millisecond Time Mode")
+        self.millisecond_mode_checkbox.setStyleSheet(self.fire_mode_checkbox.styleSheet())
+        controls_layout.addWidget(self.millisecond_mode_checkbox)
+        
+        # 3D plotting checkbox (future feature)
+        self.advanced_plot_checkbox = QCheckBox("📊 3D Plot Mode")
+        self.advanced_plot_checkbox.setStyleSheet(self.fire_mode_checkbox.styleSheet())
+        controls_layout.addWidget(self.advanced_plot_checkbox)
+        
         sidebar_layout.addWidget(controls_group)
         self.student_controls = QWidget()
         student_layout = QVBoxLayout(self.student_controls)
@@ -425,23 +546,30 @@ class MainWindow(QMainWindow):
         left_buttons = QWidget()
         left_layout = QHBoxLayout(left_buttons)
         left_layout.setSpacing(10)
-        plot_btn = ModernButton("Plot Graph")
+        
+        # Special fire mode toggle button
+        self.fire_btn = ModernButton("🔥 Fire Mode", fire_mode=True)
+        self.fire_btn.setCheckable(True)
+        self.fire_btn.clicked.connect(self.toggle_fire_button)
+        left_layout.addWidget(self.fire_btn)
+        
+        plot_btn = ModernButton("📈 Plot Graph")
         plot_btn.clicked.connect(self.plot_graph)
         left_layout.addWidget(plot_btn)
-        load_graphs_btn = ModernButton("Load Graphs")
+        load_graphs_btn = ModernButton("📂 Load Graphs")
         load_graphs_btn.clicked.connect(self.load_graphs)
         left_layout.addWidget(load_graphs_btn)
-        clear_btn = ModernButton("Clear")
+        clear_btn = ModernButton("🗑️ Clear")
         clear_btn.clicked.connect(self.clear_graph)
         left_layout.addWidget(clear_btn)
         buttons_layout.addWidget(left_buttons)
         right_buttons = QWidget()
         right_layout = QHBoxLayout(right_buttons)
         right_layout.setSpacing(10)
-        save_graph_btn = ModernButton("Save Graph")
+        save_graph_btn = ModernButton("💾 Save Graph")
         save_graph_btn.clicked.connect(self.save_graph)
         right_layout.addWidget(save_graph_btn)
-        save_image_btn = ModernButton("Save Image")
+        save_image_btn = ModernButton("📸 Save Image")
         save_image_btn.clicked.connect(self.save_graph_image)
         right_layout.addWidget(save_image_btn)
         buttons_layout.addWidget(right_buttons)
@@ -467,6 +595,21 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
         self.setPalette(DarkPalette())
+        
+        # Add modern status bar
+        status_bar = QStatusBar()
+        status_bar.setStyleSheet("""
+            QStatusBar {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                           stop:0 #2c3e50, stop:1 #34495e);
+                color: white;
+                font-size: 12px;
+                padding: 5px;
+                border-top: 2px solid #3498db;
+            }
+        """)
+        self.setStatusBar(status_bar)
+        status_bar.showMessage("Welcome to World-Class Graphing Calculator! 🚀", 5000)
 
     def set_user(self, user: User):
         try:
@@ -735,6 +878,43 @@ class MainWindow(QMainWindow):
                     self.history_list.addItem(graph_name)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error updating history: {str(e)}")
+    
+    def toggle_fire_mode(self, state):
+        """Toggle fire mode visual effects"""
+        try:
+            fire_enabled = (state == Qt.CheckState.Checked.value)
+            self.canvas.enable_fire_mode(fire_enabled)
+            if fire_enabled:
+                self.statusBar().showMessage("🔥 Fire Mode Activated!", 3000)
+            else:
+                self.statusBar().showMessage("Fire Mode Deactivated", 3000)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error toggling fire mode: {str(e)}")
+    
+    def toggle_fire_button(self):
+        """Toggle fire mode from button"""
+        try:
+            is_checked = self.fire_btn.isChecked()
+            self.fire_mode_checkbox.blockSignals(True)  # Prevent recursion
+            self.fire_mode_checkbox.setChecked(is_checked)
+            self.fire_mode_checkbox.blockSignals(False)
+            self.canvas.enable_fire_mode(is_checked)
+            if is_checked:
+                self.statusBar().showMessage("🔥 Fire Mode Activated - Prepare for awesome graphs!", 3000)
+            else:
+                self.statusBar().showMessage("Fire Mode Deactivated", 3000)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error toggling fire mode: {str(e)}")
+    
+    def sync_fire_button_from_checkbox(self, state):
+        """Sync fire button state when checkbox is toggled"""
+        try:
+            is_checked = (state == Qt.CheckState.Checked.value)
+            self.fire_btn.blockSignals(True)  # Prevent recursion
+            self.fire_btn.setChecked(is_checked)
+            self.fire_btn.blockSignals(False)
+        except Exception as e:
+            pass  # Silently fail to avoid disrupting checkbox toggle
 
     def update_comments(self, graph_id):
         if not graph_id:
@@ -915,19 +1095,57 @@ class MainWindow(QMainWindow):
                         raise ValueError(f"Error evaluating expression: {str(b)}")
                 # Evaluate and plot the main expression
                 y_values = np.vectorize(lambda x: advanced_eval(x, expression))(x_values)
+                
+                # Check if fire mode is enabled
+                fire_mode = self.fire_mode_checkbox.isChecked()
+                millisecond_mode = self.millisecond_mode_checkbox.isChecked()
+                
+                # Handle millisecond mode for time-based plotting
+                if millisecond_mode:
+                    # Convert x-axis to millisecond timestamps
+                    start_time = time.time() * 1000  # current time in ms
+                    x_labels = [f"{start_time + (i * (x_max - x_min) / len(x_values)):.3f} ms" 
+                               for i in range(len(x_values))]
+                    self.canvas.axes.set_xlabel("Time (milliseconds)", fontsize=11, 
+                                               color='#ffa500' if fire_mode else '#ecf0f1')
+                
                 if np.iscomplexobj(y_values):
-                    self.canvas.axes.plot(x_values, y_values.real, label=f"Re({expression})", linewidth=2, color='#1f77b4')
-                    self.canvas.axes.plot(x_values, y_values.imag, label=f"Im({expression})", linewidth=2, linestyle='--', color='#ff7f0e')
+                    if fire_mode:
+                        self.canvas.axes.plot(x_values, y_values.real, label=f"Re({expression})", 
+                                            linewidth=3, color='#ff4500')
+                        self.canvas.axes.plot(x_values, y_values.imag, label=f"Im({expression})", 
+                                            linewidth=3, linestyle='--', color='#ffa500')
+                    else:
+                        self.canvas.axes.plot(x_values, y_values.real, label=f"Re({expression})", 
+                                            linewidth=2.5, color='#3498db')
+                        self.canvas.axes.plot(x_values, y_values.imag, label=f"Im({expression})", 
+                                            linewidth=2.5, linestyle='--', color='#e74c3c')
                 else:
                     mask = np.isfinite(y_values)
-                    x_values = x_values[mask]
-                    y_values = y_values[mask]
-                    self.canvas.axes.plot(x_values, y_values, label=expression, linewidth=2, color='#1f77b4')
+                    x_values_filtered = x_values[mask]
+                    y_values_filtered = y_values[mask]
+                    
+                    if fire_mode:
+                        # Use fire gradient colors
+                        colors = self.calculator.create_fire_gradient_colors(len(x_values_filtered))
+                        for i in range(len(x_values_filtered) - 1):
+                            self.canvas.axes.plot(x_values_filtered[i:i+2], y_values_filtered[i:i+2], 
+                                                color=colors[i], linewidth=3, alpha=0.9)
+                        # Add a label for the legend (only once)
+                        self.canvas.axes.plot([], [], label=expression, linewidth=3, color='#ff4500')
+                    else:
+                        self.canvas.axes.plot(x_values_filtered, y_values_filtered, 
+                                            label=expression, linewidth=2.5, color='#3498db')
 
                 # If a second expression is provided, plot it as well
                 if second_expr:
-                    y2_values = np.vectorize(lambda x: advanced_eval(x, second_expr))(x_values)
-                    self.canvas.axes.plot(x_values, y2_values, label=second_expr, linewidth=2, color='orange')
+                    y2_values = np.vectorize(lambda x: advanced_eval(x, second_expr))(x_values_filtered if 'x_values_filtered' in locals() else x_values)
+                    if fire_mode:
+                        self.canvas.axes.plot(x_values_filtered if 'x_values_filtered' in locals() else x_values, 
+                                            y2_values, label=second_expr, linewidth=3, color='#ffa500')
+                    else:
+                        self.canvas.axes.plot(x_values_filtered if 'x_values_filtered' in locals() else x_values, 
+                                            y2_values, label=second_expr, linewidth=2.5, color='#e74c3c')
                     # Compute intersections symbolically
                     try:
                         var_sym = symbols(variable)
@@ -953,18 +1171,50 @@ class MainWindow(QMainWindow):
 
             self.canvas.axes.set_xlim(x_min, x_max)
             self.canvas.axes.set_ylim(y_min, y_max)
-            self.canvas.axes.set_xlabel(variable, fontsize=10)
-            self.canvas.axes.set_ylabel("y", fontsize=10)
-            self.canvas.axes.legend(fontsize=10)
-            self.canvas.axes.spines['top'].set_visible(False)
-            self.canvas.axes.spines['right'].set_visible(False)
-            self.canvas.axes.set_title(f"Graph of {expression}", pad=10)
+            
+            # Get fire mode status for styling
+            fire_mode = self.fire_mode_checkbox.isChecked()
+            millisecond_mode = self.millisecond_mode_checkbox.isChecked()
+            
+            # Apply styling based on mode
+            label_color = '#ffa500' if fire_mode else '#ecf0f1'
+            if not millisecond_mode:
+                self.canvas.axes.set_xlabel(variable, fontsize=11, color=label_color, fontweight='bold')
+            self.canvas.axes.set_ylabel("y", fontsize=11, color=label_color, fontweight='bold')
+            
+            # Enhanced legend
+            legend = self.canvas.axes.legend(fontsize=10, facecolor='#2c3e50' if not fire_mode else '#3d0000',
+                                            edgecolor=label_color, loc='best')
+            legend.get_frame().set_alpha(0.9)
+            for text in legend.get_texts():
+                text.set_color(label_color)
+            
+            # Modern title with gradient effect simulation
+            title_text = f"Graph of {expression}"
+            if fire_mode:
+                title_text = f"🔥 {title_text} 🔥"
+            if millisecond_mode:
+                title_text = f"⏱️ {title_text}"
+            self.canvas.axes.set_title(title_text, pad=15, fontsize=13, 
+                                      color=label_color, fontweight='bold')
+            
+            # Enhanced axis lines
+            axis_color = '#ff4500' if fire_mode else '#3498db'
             if x_min <= 0 <= x_max:
-                self.canvas.axes.axvline(x=0, color='k', linestyle='-', alpha=0.3)
+                self.canvas.axes.axvline(x=0, color=axis_color, linestyle='-', alpha=0.4, linewidth=2)
             if y_min <= 0 <= y_max:
-                self.canvas.axes.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+                self.canvas.axes.axhline(y=0, color=axis_color, linestyle='-', alpha=0.4, linewidth=2)
+            
             self.canvas.axes.grid(True, which='both', linestyle='--', alpha=0.3)
             self.canvas.draw()
+            
+            # Update status bar
+            if fire_mode:
+                self.statusBar().showMessage("🔥 Fire Mode Plot Complete!", 2000)
+            elif millisecond_mode:
+                self.statusBar().showMessage("⏱️ Millisecond Mode Plot Complete!", 2000)
+            else:
+                self.statusBar().showMessage("✓ Plot Complete!", 2000)
         except ValueError as e:
             QMessageBox.critical(self, "Error", f"Error plotting graph: {str(e)}")
         except Exception as e:
