@@ -382,6 +382,7 @@ class MainWindow(QMainWindow):
             }
         """)
         self.fire_mode_checkbox.stateChanged.connect(self.toggle_fire_mode)
+        self.fire_mode_checkbox.stateChanged.connect(self.sync_fire_button_from_checkbox)
         controls_layout.addWidget(self.fire_mode_checkbox)
         
         # Millisecond plotting checkbox
@@ -545,23 +546,30 @@ class MainWindow(QMainWindow):
         left_buttons = QWidget()
         left_layout = QHBoxLayout(left_buttons)
         left_layout.setSpacing(10)
-        plot_btn = ModernButton("Plot Graph")
+        
+        # Special fire mode toggle button
+        self.fire_btn = ModernButton("🔥 Fire Mode", fire_mode=True)
+        self.fire_btn.setCheckable(True)
+        self.fire_btn.clicked.connect(self.toggle_fire_button)
+        left_layout.addWidget(self.fire_btn)
+        
+        plot_btn = ModernButton("📈 Plot Graph")
         plot_btn.clicked.connect(self.plot_graph)
         left_layout.addWidget(plot_btn)
-        load_graphs_btn = ModernButton("Load Graphs")
+        load_graphs_btn = ModernButton("📂 Load Graphs")
         load_graphs_btn.clicked.connect(self.load_graphs)
         left_layout.addWidget(load_graphs_btn)
-        clear_btn = ModernButton("Clear")
+        clear_btn = ModernButton("🗑️ Clear")
         clear_btn.clicked.connect(self.clear_graph)
         left_layout.addWidget(clear_btn)
         buttons_layout.addWidget(left_buttons)
         right_buttons = QWidget()
         right_layout = QHBoxLayout(right_buttons)
         right_layout.setSpacing(10)
-        save_graph_btn = ModernButton("Save Graph")
+        save_graph_btn = ModernButton("💾 Save Graph")
         save_graph_btn.clicked.connect(self.save_graph)
         right_layout.addWidget(save_graph_btn)
-        save_image_btn = ModernButton("Save Image")
+        save_image_btn = ModernButton("📸 Save Image")
         save_image_btn.clicked.connect(self.save_graph_image)
         right_layout.addWidget(save_image_btn)
         buttons_layout.addWidget(right_buttons)
@@ -882,6 +890,31 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage("Fire Mode Deactivated", 3000)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error toggling fire mode: {str(e)}")
+    
+    def toggle_fire_button(self):
+        """Toggle fire mode from button"""
+        try:
+            is_checked = self.fire_btn.isChecked()
+            self.fire_mode_checkbox.blockSignals(True)  # Prevent recursion
+            self.fire_mode_checkbox.setChecked(is_checked)
+            self.fire_mode_checkbox.blockSignals(False)
+            self.canvas.enable_fire_mode(is_checked)
+            if is_checked:
+                self.statusBar().showMessage("🔥 Fire Mode Activated - Prepare for awesome graphs!", 3000)
+            else:
+                self.statusBar().showMessage("Fire Mode Deactivated", 3000)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error toggling fire mode: {str(e)}")
+    
+    def sync_fire_button_from_checkbox(self, state):
+        """Sync fire button state when checkbox is toggled"""
+        try:
+            is_checked = (state == Qt.CheckState.Checked.value)
+            self.fire_btn.blockSignals(True)  # Prevent recursion
+            self.fire_btn.setChecked(is_checked)
+            self.fire_btn.blockSignals(False)
+        except Exception as e:
+            pass  # Silently fail to avoid disrupting checkbox toggle
 
     def update_comments(self, graph_id):
         if not graph_id:
