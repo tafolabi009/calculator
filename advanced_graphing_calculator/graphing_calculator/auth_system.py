@@ -58,7 +58,7 @@ class ModernButton(QPushButton):
                 background-color: #2196F3;
                 border: none;
                 border-radius: 20px;
-                color: grey;
+                color: white;
                 padding: 8px 16px;
             }
             QPushButton:hover {
@@ -71,7 +71,7 @@ class ModernButton(QPushButton):
     DARK_STYLE = """
         QWidget {
             background-color: #1e1e2e;
-            color: black;
+            color: white;
         }
         QLabel {
             color: white;
@@ -123,11 +123,11 @@ class ModernLineEdit(QLineEdit):
                 border: 2px solid #BBDEFB;
                 border-radius: 20px;
                 padding: 8px 16px;
-                background-color: grey;
+                background-color: white;
             }
             QLineEdit:focus {
                 border: 2px solid #2196F3;
-                background-color: grey;
+                background-color: white;
             }
         """)
 
@@ -154,7 +154,7 @@ class AuthWindow(QMainWindow):
     def init_ui(self):
         self.setWindowTitle('Advanced Graphing Calculator - Authentication')
         self.setMinimumSize(400, 600)
-        self.setStyleSheet("background-color: grey;")
+        self.setStyleSheet("background-color: #1e1e2e;")
 
         # Create stacked widget for login/signup pages
         self.stacked_widget = QStackedWidget()
@@ -199,7 +199,7 @@ class AuthWindow(QMainWindow):
                 background-color: #4CAF50;
                 border: none;
                 border-radius: 20px;
-                color: grey;
+                color: white;
                 padding: 8px 16px;
             }
             QPushButton:hover {

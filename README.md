@@ -25,15 +25,13 @@ This repository contains a graphing calculator project written in Python. The pu
 
 ## Requirements
 
-- Python 3.x
-- SQLite
-- PyQt6~=6.8.0
-- numpy~=2.0.0
-- matplotlib~=3.9.1
-- logging~=0.4.9.6
-- scipy~=1.15.1
-- sympy~=1.13.3
-- setuptools~=70.2.0
+- Python 3.8+
+- SQLite (built-in with Python)
+- PyQt6>=6.8.0
+- numpy>=1.24.0
+- matplotlib>=3.7.0
+- scipy>=1.10.0
+- sympy>=1.12
 
 ## Installation
 
