@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import time
 from datetime import datetime
-from PyQt6.QtGui import QPalette, QColor, QIcon
+from PyQt6.QtGui import QPalette, QColor, QIcon, QShortcut, QKeySequence
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLineEdit, QLabel, QComboBox,
                              QDoubleSpinBox, QTextEdit, QMessageBox, QGridLayout,
@@ -610,6 +610,137 @@ class MainWindow(QMainWindow):
         """)
         self.setStatusBar(status_bar)
         status_bar.showMessage("Welcome to World-Class Graphing Calculator! 🚀", 5000)
+        
+        # Setup keyboard shortcuts
+        self.setup_keyboard_shortcuts()
+
+    def setup_keyboard_shortcuts(self):
+        """Configure keyboard shortcuts for power users"""
+        # Plot graph - Ctrl+Enter or Ctrl+Return
+        plot_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
+        plot_shortcut.activated.connect(self.plot_graph)
+        
+        # Save graph - Ctrl+S
+        save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        save_shortcut.activated.connect(self.save_student_graph)
+        
+        # Clear/New graph - Ctrl+N
+        clear_shortcut = QShortcut(QKeySequence("Ctrl+N"), self)
+        clear_shortcut.activated.connect(self.clear_graph)
+        
+        # Toggle fire mode - Ctrl+F
+        fire_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        fire_shortcut.activated.connect(self.toggle_fire_button)
+        
+        # Export as image - Ctrl+E
+        export_shortcut = QShortcut(QKeySequence("Ctrl+E"), self)
+        export_shortcut.activated.connect(self.save_graph_image)
+        
+        # Help - F1
+        help_shortcut = QShortcut(QKeySequence("F1"), self)
+        help_shortcut.activated.connect(self.show_help)
+        
+        # Focus expression input - Ctrl+L
+        focus_shortcut = QShortcut(QKeySequence("Ctrl+L"), self)
+        focus_shortcut.activated.connect(lambda: self.expr_input.setFocus())
+        
+        self.statusBar().showMessage("💡 Tip: Press F1 for keyboard shortcuts", 3000)
+    
+    def clear_graph(self):
+        """Clear the current graph"""
+        self.canvas.axes.clear()
+        self.canvas.axes.grid(True, color='#404040', linestyle='--', alpha=0.3)
+        self.canvas.draw()
+        self.statusBar().showMessage("✨ Graph cleared", 2000)
+    
+    def show_help(self):
+        """Show help dialog with keyboard shortcuts"""
+        help_text = """
+        <h2>🎯 Keyboard Shortcuts</h2>
+        <table style='width:100%; border-collapse: collapse;'>
+        <tr><td style='padding: 5px;'><b>Ctrl+Enter</b></td><td>Plot current expression</td></tr>
+        <tr><td style='padding: 5px;'><b>Ctrl+S</b></td><td>Save graph</td></tr>
+        <tr><td style='padding: 5px;'><b>Ctrl+N</b></td><td>Clear graph</td></tr>
+        <tr><td style='padding: 5px;'><b>Ctrl+F</b></td><td>Toggle fire mode</td></tr>
+        <tr><td style='padding: 5px;'><b>Ctrl+E</b></td><td>Export as image</td></tr>
+        <tr><td style='padding: 5px;'><b>Ctrl+L</b></td><td>Focus expression input</td></tr>
+        <tr><td style='padding: 5px;'><b>F1</b></td><td>Show this help</td></tr>
+        </table>
+        
+        <h3>🔥 Tips</h3>
+        <ul>
+        <li>Use <b>x</b> as your variable (e.g., sin(x), x**2)</li>
+        <li>Separate equations with <b>=</b> to solve them</li>
+        <li>Enable fire mode for stunning visualizations</li>
+        <li>Use millisecond mode for time-series data</li>
+        </ul>
+        """
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Help - Keyboard Shortcuts")
+        msg.setText(help_text)
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setStyleSheet("""
+            QMessageBox {
+                background-color: #2d2d2d;
+            }
+            QLabel {
+                color: white;
+                font-size: 13px;
+            }
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        msg.exec()
+
+    def save_student_graph(self):
+        """Save the current graph with a dialog"""
+        if not self.current_user:
+            QMessageBox.warning(self, "Error", "Please login first")
+            return
+        
+        # Ask for graph name
+        name, ok = QInputDialog.getText(self, "Save Graph", "Enter graph name:")
+        if not ok or not name:
+            return
+        
+        expression = self.expr_input.text().strip()
+        if not expression:
+            QMessageBox.warning(self, "Error", "Please enter an expression first")
+            return
+        
+        try:
+            # Get current settings
+            x_min = self.min_value.value()
+            x_max = self.max_value.value()
+            variable = self.var_selector.currentText().strip()
+            scale_type = self.scale_type.currentText().lower()
+            
+            # Save to database
+            self.db.save_graph(
+                user_id=self.current_user.id,
+                name=name,
+                expression=expression,
+                variable=variable,
+                x_min=x_min,
+                x_max=x_max,
+                y_min=x_min,  # Simplified
+                y_max=x_max,
+                scale_type=scale_type
+            )
+            
+            self.statusBar().showMessage(f"✅ Graph '{name}' saved successfully!", 3000)
+            self.load_student_graphs()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save graph: {str(e)}")
 
     def set_user(self, user: User):
         try:
